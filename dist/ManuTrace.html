@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ManuTrace</title>
+<style>
+  :root{
+    --panel-w: 360px;
+    --bg:#111; --fg:#eee; --muted:#aaa; --accent:#4aa3ff;
+    --danger:#ff5d5d;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{display:flex;height:100%;width:100%}
+  .panel{
+    width:var(--panel-w);padding:14px 16px;border-right:1px solid #222;box-sizing:border-box;overflow:auto
+  }
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .toolbar{display:flex;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #222; height: 50px;}
+  .dropzone{
+    position:relative;flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;
+    background:#000;
+  }
+  video{max-width:100%;max-height:100%;display:block}
+  canvas.overlay{
+    position:absolute;inset:0; /* クリックを受け取るために pointer-events を有効 */
+    /* pointer-events:none;  ← これがクリックを奪っていたので削除 */
+  }
+  .dz-hint{
+    position:absolute;inset:auto 16px 16px auto;background:rgba(0,0,0,.5);padding:6px 8px;border-radius:6px;font-size:12px;color:#ddd
+  }
+  .row{display:flex;gap:8px;align-items:center;margin:10px 0}
+  .row label{min-width:100px;color:var(--muted);font-size:14px}
+  input[type=number], input[type=text]{background:#181818;border:1px solid #474747;color:var(--fg);padding:6px 8px;border-radius:6px}
+  input[type=number]{width:40px}
+  .btn{
+    background:#303030;border:1px solid #2a2a2a;color:var(--fg);padding:6px 10px;border-radius:6px;cursor:pointer
+  }
+  .btn:hover{border-color:#5c5c5c}
+  .btn.primary{border-color:#2d5bff;background:#1a2238}
+  .btn.danger{border-color:#7a1b1b;background:#2a1414;color:#ffb9b9}
+  .now-id{display:inline-flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid #2a2a2a;border-radius:999px;}
+  .dot{width:20px;height:20px;border-radius:50%}
+  #nowIdText{font-size: 18px;}
+  .hint{color:#9a9a9a;font-size:12px;line-height:1.5}
+  .kbd{background:#222;border:1px solid #333;border-bottom-color:#222;padding:0 4px;border-radius:4px;font-size: 0.7rem;}
+  .file-input{display:none}
+  .small{font-size:12px;color:#aeaeae}
+  .sep{height:1px;background:#222;margin:12px 0}
+.stage{position:absolute;left:0;top:0;transform-origin:0 0;}
+.stage{position:absolute;left:0;top:0;transform-origin:0 0;}
+/* ==== Timeline Drawer ==== */
+.timeline{position:absolute;left:0;bottom:0;width:100%;z-index:10;background:#0e0e0e;border-top:1px solid #222;overflow:hidden;transition:height .18s ease;}
+.timeline.collapsed{height:26px}
+.timeline.expanded{height:var(--timeline-h,180px)}
+.timeline .handle{position:absolute;left:0;right:0;top:0;height:24px;display:flex;align-items:center;gap:8px;padding:0 8px;cursor:pointer;user-select:none;color:#bbb;font-size:12px}
+.timeline .handle:hover{background:#151515}
+.timeline canvas{position:absolute;left:0;right:0;top:24px;bottom:0}
+i{font-size: 20px; margin: 5px;}
+#rateInput.glow, input[type=number].glow{box-shadow:0 0 0 3px rgba(74,163,255,.6);transition:box-shadow .12s ease-out}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+<div class="wrap">
+
+  <aside class="panel">
+    <h2 style="margin:6px 0 12px;">ManuTrace</h2>
+
+    <div class="row">
+      <button id="openBtn" class="btn primary">Select a file</button>
+      <input id="fileInput" class="file-input" type="file" accept="video/*" />
+    </div>
+    <div class="hint">Or drag and drop to load a video</div>
+
+    <div class="sep"></div>
+    <h3>Video settings</h3>
+    <div class="row">
+      <label>FPS（Estimated/manually entered）</label>
+      <input id="fpsInput" type="number" min="1" value="30" />
+    </div>
+    <div class="row">
+      <label>Play speed</label>
+      <input id="rateInput" type="number" min="0.1" step="0.1" value="1" />
+    </div>
+    <h3>Display settings</h3>
+    <div class="row">
+      <label>Frame number to show tracks: n</label>
+      <input id="trailN" type="number" min="0" value="30" />
+    </div>
+    <div class="row">
+      <label>Timeline height (px)</label>
+      <input id="timelineH" type="number" min="60" max="600" step="10" value="180" />
+    </div>
+    <div class="row">
+      <button id="resetView" class="btn"><i class="fa-solid fa-magnifying-glass"></i>Reset zoom/pan</button>
+    </div>
+
+    <div class="sep"></div>
+    <h3>Tracking data</h3>
+    <div class="row">
+      <label>Now editing: </label>
+      <span id="nowId" class="now-id"><span class="dot" id="nowDot"></span><span id="nowIdText">—</span></span>
+    </div>
+    <div class="hint">Press numeric/alphabet keys to switch object ID to edit</div>
+    <div class="hint">Click on video to set position of the object</div>
+
+    <div class="sep"></div>
+
+    <div class="row">
+      <button id="exportCsv" class="btn"><i class="fa-solid fa-file-arrow-down"></i><div>Export CSV</div></button>
+      <button id="importCsvBtn" class="btn"><i class="fa-solid fa-file-import"></i><div>Import CSV</div></button>
+      <input id="importCsvInput" class="file-input" type="file" accept=".csv,text/csv" />
+      <button id="clearAll" class="btn danger"><i class="fa-solid fa-trash"></i><div>Trash all tracks</div></button>
+    </div>
+    <div class="row" style="align-items:flex-start">
+      <label>Save name</label>
+      <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+        <input id="saveName" type="text" placeholder="tracks" />
+        <label style="min-width:unset;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
+          <input id="addTimestamp" type="checkbox" checked />Add timestamp
+        </label>
+      </div>
+    </div>
+    <div class="small">CSV columns: id,frame,time_sec,x,y,source(manual|interp)</div>
+
+    <div class="sep"></div>
+
+    <h3>Shortcut keys</h3>
+    <div class="row">
+      ●<span class="kbd">Space</span>: Play/Pause
+    </div>
+    <div class="row">
+      ●<span class="kbd">←</span>/<span class="kbd">→</span>: Jump <input id="k0" type="number" min="0" step="0.1" value="0.2" /> sec.
+    </div>
+    <div class="row">
+      ●<span class="kbd">Shift</span> + <span class="kbd">←</span><span class="kbd">→</span>: <input id="k1" type="number" min="0" step="0.1" value="1.0" /> sec.
+    </div>
+    <div class="row">
+      ●<span class="kbd">Ctrl</span> + <span class="kbd">←</span><span class="kbd">→</span>: <input id="k2" type="number" min="0" step="0.1" value="3.0" /> sec.
+    </div>
+    <div class="row">
+      ●<span class="kbd">Ctrl</span>+<span class="kbd">Shift</span> + <span class="kbd">←</span><span class="kbd">→</span>: <input id="k3" type="number" min="0" step="0.1" value="10.0" /> sec.
+    </div>
+    <div class="row">
+      ●<span class="kbd">Ctrl</span>+<span class="kbd">S</span>: Save CSV
+    </div>
+    <div class="row">
+      ●<span class="kbd">Ctrl</span>+ wheel: seek
+    </div>
+    <div class="row">
+      ●<span class="kbd">Shift</span>+ wheel: Change play speed
+    </div>
+
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <button id="playPause" class="btn">▶ Play</button>
+      <div class="small" id="status">Video not loaded</div>
+      <div style="flex:1"></div>
+      <button id="goStart" class="btn" title="Go to start">⏮ Start</button>
+    </div>
+    <div id="dropzone" class="dropzone">
+      <div id="stage" class="stage">
+        <video id="video" playsinline></video>
+        <canvas id="overlay" class="overlay"></canvas>
+      </div>
+      <div class="dz-hint">Drop a movie here</div>
+          <div id="timeline" class="timeline collapsed">
+        <div id="timelineHandle" class="handle">Timeline ▾（click to collapse）</div>
+        <canvas id="timelineCanvas"></canvas>
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// =========================================================
+// 基本DOM
+// =========================================================
+const fileInput   = document.getElementById('fileInput');
+const openBtn     = document.getElementById('openBtn');
+const dropzone    = document.getElementById('dropzone');
+const video       = document.getElementById('video');
+const overlay     = document.getElementById('overlay');
+const stage       = document.getElementById('stage');
+const ctx         = overlay.getContext('2d', { alpha: true });
+const playPause   = document.getElementById('playPause');
+const statusEl    = document.getElementById('status');
+const nowIdEl     = document.getElementById('nowIdText');
+const nowDotEl    = document.getElementById('nowDot');
+const timelineEl   = document.getElementById('timeline');
+const timelineHandle = document.getElementById('timelineHandle');
+const timelineCanvas = document.getElementById('timelineCanvas');
+const tctx = timelineCanvas.getContext('2d');
+let timelinePoints = []; // タイムライン上の●の座標キャッシュ（ヒットテスト用）
+
+const fpsInput    = document.getElementById('fpsInput');
+const trailNInput = document.getElementById('trailN');
+const k0Input     = document.getElementById('k0');
+const k1Input     = document.getElementById('k1');
+const k2Input     = document.getElementById('k2');
+const k3Input     = document.getElementById('k3');
+const rateInput  = document.getElementById('rateInput');
+const saveNameInput = document.getElementById('saveName');
+const addTimestampChk = document.getElementById('addTimestamp');
+const exportBtn   = document.getElementById('exportCsv');
+const importBtn   = document.getElementById('importCsvBtn');
+const importInput = document.getElementById('importCsvInput');
+const clearBtn   = document.getElementById('clearAll');
+const resetViewBtn = document.getElementById('resetView');
+const goStartBtn = document.getElementById('goStart');
+const timelineHInput = document.getElementById('timelineH');
+let rateGlowTid = null;
+let undoStack = [];
+function pushUndo(a){
+  undoStack.push(a);
+  if (undoStack.length > 3) undoStack.shift();
+}
+function undoLast(){
+  const a = undoStack.pop();
+  if (!a) return;
+  const tr = tracks[a.id];
+  if (!tr) return;
+  if (a.prev){
+    tr.manual.set(a.frame, { x: a.prev.x, y: a.prev.y });
+  } else {
+    tr.manual.delete(a.frame);
+  }
+  recomputeInterpolationForId(a.id);
+  statusEl.textContent = `Undo: ID ${a.id}, frame ${a.frame}`;
+  drawOverlay();
+  drawTimeline();
+}
+
+// =========================================================
+// ドラッグ＆ドロップ/ファイル選択（クリックもドロップも確実に）
+// =========================================================
+openBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) loadVideoFile(file);
+});
+
+// ブラウザ既定の挙動を抑止（ページ遷移など）
+['dragover','dragenter','dragleave','drop'].forEach(ev=>{
+  document.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); }, { passive:false });
+});
+
+// dropzone でも受ける
+['dragover','dragenter','dragleave'].forEach(ev=>{
+  dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); }, { passive:false });
+});
+// overlay でも受ける（クリックを有効化したので、DnDもここで確実に受ける）
+['dragover','dragenter','dragleave'].forEach(ev=>{
+  overlay.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); }, { passive:false });
+});
+
+function handleDrop(e){
+  const dt = e.dataTransfer;
+  const files = dt?.files;
+  if (files && files.length) loadVideoFile(files[0]);
+}
+dropzone.addEventListener('drop', handleDrop);
+overlay.addEventListener('drop', handleDrop);
+
+// =========================================================
+// 動画読み込み
+// =========================================================
+let objectUrl = null;
+
+function loadVideoFile(file){
+  try{
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+    video.load();
+    statusEl.textContent = `Loading: ${file.name}`;
+    video.addEventListener('loadedmetadata', handleLoadedMeta, { once:true });
+  }catch(err){
+    console.error(err);
+    alert('Failed to load the movie file. Try converting to other format.');
+  }
+}
+
+function handleLoadedMeta(){
+  fitCanvasToVideo(true);
+  video.playbackRate = Math.max(0.1, +rateInput.value || 1);
+  statusEl.textContent = `Loaded: ${Math.round(video.duration*10)/10}s, ${video.videoWidth}×${video.videoHeight}`;
+  drawOverlay();
+  drawTimeline();
+}
+
+// リサイズ対応
+window.addEventListener('resize', ()=>{ fitCanvasToVideo(); fitTimelineCanvas(); drawTimeline(); });
+function fitCanvasToVideo(initFit = false){
+  // 動画の「実ピクセル」サイズにキャンバスとビデオを合わせる
+  if (!(video.videoWidth && video.videoHeight)) return;
+
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+
+  // 1) キャンバス＆ステージを動画ピクセルに固定
+  overlay.width = vw;
+  overlay.height = vh;
+  stage.style.width = vw + 'px';
+  stage.style.height = vh + 'px';
+
+  // 2) Video要素も同じピクセル数に固定（max系を無効化してCSS縮小を避ける）
+  Object.assign(video.style, {
+    width: vw + 'px',
+    height: vh + 'px',
+    maxWidth: 'none',
+    maxHeight: 'none'
+  });
+
+  // 3) 初回のみ、ドロップゾーンに収まるように自動フィット（pan/scale を設定）
+  if (initFit){
+    const rect = dropzone.getBoundingClientRect();
+    const fitScale = Math.min(rect.width / vw, rect.height / vh);
+    scale = (fitScale && isFinite(fitScale) && fitScale > 0) ? fitScale : 1;
+    panX = (rect.width  - vw * scale) * 0.5;
+    panY = (rect.height - vh * scale) * 0.5;
+    applyStageTransform();
+  }
+}
+
+// =========================================================
+// 追跡データ構造
+// =========================================================
+const tracks = {};
+const colorPool = [
+  '#ff6b6b','#4dabf7','#ffd43b','#63e6be','#b197fc','#ffa94d','#74c0fc',
+  '#f06595','#51cf66','#e599f7','#82c91e','#fcc419','#15aabf','#a5d8ff'
+];
+// 各IDに安定して色を割り当てる（作成順にプールから割り当て、循環）
+const colorIndexById = new Map();
+let nextColorIdx = 0;
+function colorForId(id){
+  if (!colorIndexById.has(id)){
+    colorIndexById.set(id, nextColorIdx % colorPool.length);
+    nextColorIdx += 1;
+  }
+  return colorPool[colorIndexById.get(id)];
+}
+
+let currentId = null;
+function setCurrentId(id){
+  if (!tracks[id]){
+    tracks[id] = { color: colorForId(id), manual:new Map(), interp:new Map() };
+  }
+  currentId = id;
+  nowIdEl.textContent = id;
+  nowDotEl.style.background = tracks[id].color;
+}
+
+// 初期ID
+setCurrentId('1');
+
+// =========================================================
+// スプライン補間（自然三次）
+// =========================================================
+function makeNaturalCubicSpline(xs, ys){
+  const n = xs.length;
+  if (n < 2){
+    return (x)=> ys[0] ?? 0;
+  }
+  const a = ys.slice();
+  const b = new Array(n).fill(0);
+  const d = new Array(n).fill(0);
+  const h = new Array(n-1).fill(0);
+  for (let i=0;i<n-1;i++) h[i] = xs[i+1]-xs[i];
+
+  const alpha = new Array(n).fill(0);
+  for (let i=1;i<n-1;i++){
+    alpha[i] = (3/h[i])*(a[i+1]-a[i]) - (3/h[i-1])*(a[i]-a[i-1]);
+  }
+
+  const c = new Array(n).fill(0);
+  const l = new Array(n).fill(0);
+  const mu = new Array(n).fill(0);
+  const z = new Array(n).fill(0);
+
+  l[0]=1; mu[0]=0; z[0]=0;
+  for (let i=1;i<n-1;i++){
+    l[i] = 2*(xs[i+1]-xs[i-1]) - h[i-1]*mu[i-1];
+    mu[i] = h[i]/l[i];
+    z[i] = (alpha[i] - h[i-1]*z[i-1]) / l[i];
+  }
+  l[n-1]=1; z[n-1]=0; c[n-1]=0;
+
+  for (let j=n-2;j>=0;j--){
+    c[j] = z[j] - mu[j]*c[j+1];
+    b[j] = (a[j+1]-a[j])/h[j] - h[j]*(c[j+1]+2*c[j])/3;
+    d[j] = (c[j+1]-c[j])/(3*h[j]);
+  }
+
+  return function evalAt(x){
+    if (x <= xs[0]) return a[0];
+    if (x >= xs[n-1]) return a[n-1];
+    let i=0;
+    for (; i<n-1; i++){
+      if (x < xs[i+1]) break;
+    }
+    const dx = x - xs[i];
+    return a[i] + b[i]*dx + c[i]*dx*dx + d[i]*dx*dx*dx;
+  }
+}
+
+function recomputeInterpolationForId(id){
+  const track = tracks[id];
+  if (!track) return;
+  track.interp.clear();
+  const frames = Array.from(track.manual.keys()).sort((a,b)=>a-b);
+  if (frames.length < 2) return;
+  const xs = frames;
+  const xVals = frames.map(f=>track.manual.get(f).x);
+  const yVals = frames.map(f=>track.manual.get(f).y);
+  const sx = makeNaturalCubicSpline(xs, xVals);
+  const sy = makeNaturalCubicSpline(xs, yVals);
+  for (let f = xs[0]; f <= xs[xs.length-1]; f++){
+    if (track.manual.has(f)) continue;
+    track.interp.set(f, { x: sx(f), y: sy(f) });
+  }
+}
+
+// =========================================================
+// 座標変換（ズーム/パン対応）
+// =========================================================
+let scale = 1.0;
+let panX = 0, panY = 0;
+function applyStageTransform(){
+  stage.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+}
+applyStageTransform();
+// Timeline init state
+let timelineExpanded = false;
+function setTimelineExpanded(exp){
+  timelineExpanded = !!exp;
+  timelineEl.classList.toggle('expanded', timelineExpanded);
+  timelineEl.classList.toggle('collapsed', !timelineExpanded);
+  fitTimelineCanvas();
+  drawTimeline();
+}
+setTimelineExpanded(true);
+if (timelineHInput){
+  const applyH = ()=>{
+    let v = Math.max(60, Math.min(600, +timelineHInput.value || 180));
+    timelineHInput.value = String(v);
+    timelineEl.style.setProperty('--timeline-h', v + 'px');
+    fitTimelineCanvas();
+    drawTimeline();
+    timelineHInput.classList.add('glow');
+    if (rateGlowTid) clearTimeout(rateGlowTid);
+    rateGlowTid = setTimeout(()=>{ timelineHInput.classList.remove('glow'); }, 120);
+  };
+  applyH();
+  timelineHInput.addEventListener('change', applyH);
+  timelineHInput.addEventListener('wheel', (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    const dir = e.deltaY < 0 ? 1 : -1;
+    let v = +timelineHInput.value || 180;
+    v = Math.max(60, Math.min(600, v + dir*10));
+    timelineHInput.value = String(v);
+    applyH();
+  }, { passive:false });
+}
+
+// 高さアニメーション完了時に実寸へ再フィット（collapsed/expanded 切替時）
+timelineEl.addEventListener('transitionend', (e)=>{
+  if (e.propertyName === 'height'){
+    fitTimelineCanvas();
+    drawTimeline();
+  }
+});
+
+timelineHandle.addEventListener('click', ()=>{
+  setTimelineExpanded(!timelineExpanded);
+  timelineHandle.textContent = timelineExpanded ? 'Timeline ▴（click to collapse）' : 'Timeline ▾（click to expand）';
+});
+
+function screenToVideoCoord(clientX, clientY){
+  // コンテナ（dropzone）基準でスクリーン座標を取得し、パン・スケールを逆変換
+  const crect = dropzone.getBoundingClientRect();
+  const scx = clientX - crect.left; // コンテナ左上基準のスクリーン座標
+  const scy = clientY - crect.top;
+  const x = (scx - panX) / scale;
+  const y = (scy - panY) / scale;
+  return { x, y };
+};
+
+// ホイールズーム
+overlay.addEventListener('wheel', (e)=>{
+  if (e.ctrlKey || e.shiftKey) return;
+  e.preventDefault();
+  const factor = (e.deltaY < 0) ? 1.1 : 0.9;
+  const crect = dropzone.getBoundingClientRect();
+  const scx = e.clientX - crect.left;
+  const scy = e.clientY - crect.top;
+  const worldX = (scx - panX) / scale;
+  const worldY = (scy - panY) / scale;
+  const newScale = scale * factor;
+  panX = scx - worldX * newScale;
+  panY = scy - worldY * newScale;
+  scale = newScale;
+  applyStageTransform();
+  drawOverlay();
+}, { passive:false });
+
+dropzone.addEventListener('contextmenu', (e)=>{ e.preventDefault(); });
+overlay.addEventListener('contextmenu', (e)=>{ e.preventDefault(); });
+let isRightPanning = false; let panLastX = 0; let panLastY = 0;
+overlay.addEventListener('mousedown', (e)=>{
+  if (e.button !== 2) return;
+  e.preventDefault();
+  isRightPanning = true;
+  panLastX = e.clientX; panLastY = e.clientY;
+  dropzone.style.cursor = 'grabbing';
+});
+window.addEventListener('mousemove', (e)=>{
+  if (!isRightPanning) return;
+  const dx = e.clientX - panLastX;
+  const dy = e.clientY - panLastY;
+  panLastX = e.clientX; panLastY = e.clientY;
+  panX += dx; panY += dy;
+  applyStageTransform();
+  drawOverlay();
+});
+window.addEventListener('mouseup', (e)=>{
+  if (!isRightPanning) return;
+  if (e.button === 2) {
+    isRightPanning = false;
+    dropzone.style.cursor = '';
+  }
+});
+
+// =========================================================
+// クリックで手動点追加（動画は一時停止中に）
+// =========================================================
+overlay.addEventListener('click', (e)=>{
+  if (!video.src) return;
+  if (!video.paused){
+    return; // 再生中は記録しない
+  }
+  const fps = Math.max(1, +fpsInput.value || 30);
+  const frame = Math.round(video.currentTime * fps);
+  const p = screenToVideoCoord(e.clientX, e.clientY);
+
+  if (!currentId) setCurrentId('1');
+  const t = tracks[currentId];
+  const prevPt = t.manual.has(frame) ? t.manual.get(frame) : null;
+  const nextPt = { x:p.x, y:p.y };
+  t.manual.set(frame, nextPt);
+  pushUndo({ id: currentId, frame, prev: prevPt ? {x:prevPt.x, y:prevPt.y} : null, next: {x:nextPt.x, y:nextPt.y} });
+  recomputeInterpolationForId(currentId);
+
+  statusEl.textContent = `ID ${currentId}: Added a point at frame ${frame} (x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)})`;
+  drawOverlay();
+  drawTimeline();
+});
+
+// =========================================================
+// 再生ループ＆描画
+// =========================================================
+let rafId = null;
+function updateToolbarTime(){
+  if (!video.src) return;
+  const fps = Math.max(1, +fpsInput.value || 30);
+  const frame = Math.round((video.currentTime || 0) * fps);
+  statusEl.textContent = `t=${(video.currentTime||0).toFixed(3)}s (frame ${frame})`;
+}
+function renderLoop(){
+  updateToolbarTime();
+  drawOverlay();
+  drawTimeline();
+  rafId = requestAnimationFrame(renderLoop);
+}
+video.addEventListener('timeupdate', updateToolbarTime);
+video.addEventListener('play', ()=>{
+  if (rafId==null) rafId = requestAnimationFrame(renderLoop);
+});
+video.addEventListener('pause', ()=>{
+  if (rafId!=null){ cancelAnimationFrame(rafId); rafId=null; }
+  updateToolbarTime();
+  drawOverlay();
+  drawTimeline();
+});
+video.addEventListener('seeked', ()=> { updateToolbarTime(); drawOverlay(); drawTimeline(); });
+
+function drawOverlay(){
+  fitCanvasToVideo();
+  ctx.clearRect(0,0,overlay.width, overlay.height);
+
+  // 変形は CSS 側（stage）で行うので、ここでは素の座標で描画
+const fps = Math.max(1, +fpsInput.value || 30);
+const curFrame = Math.round((video.currentTime || 0) * fps);
+const trailN = Math.max(0, +trailNInput.value || 0);
+
+for (const [id, tr] of Object.entries(tracks)){
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = tr.color; ctx.fillStyle = tr.color;
+  const pts = [];
+  for (let f = curFrame - trailN; f <= curFrame + trailN; f++){
+    if (tr.manual.has(f)){
+      const p = tr.manual.get(f);
+      pts.push({ f, x:p.x, y:p.y, manual:true });
+    }else if (tr.interp.has(f)){
+      const p = tr.interp.get(f);
+      pts.push({ f, x:p.x, y:p.y, manual:false });
+    }
+  }
+  if (pts.length > 1){
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+  }
+  for (const p of pts){
+    ctx.beginPath();
+    const r = p.manual ? 4 : 2.5;
+    ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  let pNow = null;
+  if (tr.manual.has(curFrame)){
+    const p = tr.manual.get(curFrame); pNow = {x:p.x, y:p.y};
+  } else if (tr.interp.has(curFrame)){
+    const p = tr.interp.get(curFrame); pNow = {x:p.x, y:p.y};
+  } else {
+    const frames = Array.from(tr.manual.keys()).sort((a,b)=>a-b);
+    if (frames.length >= 2 && curFrame >= frames[0] && curFrame <= frames[frames.length-1]){
+      const xs = frames;
+      const xVals = frames.map(f=>tr.manual.get(f).x);
+      const yVals = frames.map(f=>tr.manual.get(f).y);
+      const sx = makeNaturalCubicSpline(xs, xVals);
+      const sy = makeNaturalCubicSpline(xs, yVals);
+      pNow = { x: sx(curFrame), y: sy(curFrame) };
+    }
+  }
+  if (pNow){
+    ctx.beginPath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#ffffff';
+    ctx.arc(pNow.x, pNow.y, 6, 0, Math.PI*2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = tr.color;
+    ctx.arc(pNow.x, pNow.y, 3, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+}
+
+// =========================================================
+// 再生/一時停止 & ショートカット
+// =========================================================
+playPause.addEventListener('click', togglePlayPause);
+function togglePlayPause(){
+  if (!video.src) return;
+  if (video.paused){
+    video.play(); playPause.textContent = '⏸ Pause';
+  }else{
+    video.pause(); playPause.textContent = '▶ Play';
+  }
+}
+
+document.addEventListener('keydown', (e)=>{
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return;
+
+  if (e.code === 'Space'){
+    e.preventDefault();
+    togglePlayPause();
+    return;
+  }
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown'){
+    e.preventDefault();
+    const dir = (e.key === 'ArrowUp') ? 1 : -1;
+    let r = Math.max(0.1, +rateInput.value || 1);
+    r = Math.max(0.1, Math.round((r + dir*0.1)*10)/10);
+    rateInput.value = String(r);
+    video.playbackRate = r;
+    rateInput.classList.add('glow');
+    if (rateGlowTid) clearTimeout(rateGlowTid);
+    rateGlowTid = setTimeout(()=>{ rateInput.classList.remove('glow'); }, 120);
+    return;
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+    e.preventDefault();
+    const dir = (e.key === 'ArrowLeft') ? -1 : 1;
+    const k0 = +k0Input.value || 0; const k1 = +k1Input.value || 0;
+    const k2 = +k2Input.value || 0; const k3 = +k3Input.value || 0;
+    const dt = (e.ctrlKey && e.shiftKey) ? k3
+            :  e.ctrlKey ? k2
+            :  e.shiftKey ? k1
+            :  k0;
+    video.currentTime = Math.max(0, Math.min(video.duration||Infinity, video.currentTime + dir*dt));
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')){
+    e.preventDefault();
+    undoLast();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.code === 'KeyS')){
+    e.preventDefault();
+    exportCSV();
+    return;
+  }
+  if (e.key === 'Backspace'){
+    e.preventDefault();
+    if (!video.src || !currentId) return;
+    const fps = Math.max(1, +fpsInput.value || 30);
+    const frame = Math.round((video.currentTime || 0) * fps);
+    const tr = tracks[currentId];
+    if (tr && tr.manual.has(frame)){
+      const prevPt = tr.manual.get(frame);
+      pushUndo({ id: currentId, frame, prev: {x:prevPt.x, y:prevPt.y}, next: null });
+      tr.manual.delete(frame);
+      recomputeInterpolationForId(currentId);
+      statusEl.textContent = `ID ${currentId}: deleted manually entered point at frame ${frame}`;
+      drawOverlay();
+      drawTimeline();
+    } else {
+      statusEl.textContent = `Nothing to delete（ID ${currentId}, frame ${frame}）`;
+    }
+    drawTimeline();
+    return;
+  }
+  if (/^[a-z0-9]$/i.test(e.key)){
+    setCurrentId(e.key.toLowerCase());
+    return;
+  }
+});
+
+// =========================================================
+// CSV エクスポート
+// =========================================================
+function exportCSV(){
+  const hasData = Object.values(tracks).some(tr => tr.manual.size || tr.interp.size);
+  if (!hasData){
+    alert('No track data to export.');
+    return;
+  }
+  const fps = Math.max(1, +fpsInput.value || 30);
+  const header = ['id','frame','time_sec','x','y','source'];
+  const dataRows = [];
+
+  for (const [id, tr] of Object.entries(tracks)){
+    for (const [f, p] of tr.manual.entries()){
+      dataRows.push([id, f, (f/fps).toFixed(6), p.x.toFixed(3), p.y.toFixed(3), 'manual']);
+    }
+    for (const [f, p] of tr.interp.entries()){
+      dataRows.push([id, f, (f/fps).toFixed(6), p.x.toFixed(3), p.y.toFixed(3), 'interp']);
+    }
+  }
+  dataRows.sort((a,b)=>{
+    if (a[0]!==b[0]) return a[0] < b[0] ? -1:1;
+    return (+a[1])-(+b[1]);
+  });
+
+  const csv = [header, ...dataRows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  let base = (saveNameInput && saveNameInput.value != null) ? String(saveNameInput.value).trim() : '';
+  if (!base) base = 'tracks';
+  base = base.replace(/[\/:*?"<>|]+/g, '_');
+  const addTs = !!(addTimestampChk && addTimestampChk.checked);
+  const ts = new Date().toISOString().replace(/[:.]/g,'-');
+  const name = addTs ? `${base}_${ts}` : base;
+  a.download = `${name}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+exportBtn.addEventListener('click', exportCSV);
+rateInput.addEventListener('change', ()=>{
+  const r = Math.max(0.1, +rateInput.value || 1);
+  rateInput.value = String(r);
+  video.playbackRate = r;
+});
+
+function addWheelSpin(input, step, min, max, onApply){
+  input.addEventListener('wheel', (e)=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const dir = e.deltaY < 0 ? 1 : -1;
+    let v = +input.value || 0;
+    v = v + dir*step;
+    if (min != null) v = Math.max(min, v);
+    if (max != null) v = Math.min(max, v);
+    const dec = (String(step).split('.')[1]||'').length;
+    if (dec) v = Math.round(v * 10**dec) / 10**dec; else v = Math.round(v);
+    input.value = String(v);
+    if (onApply) onApply(v);
+    input.classList.add('glow');
+    if (rateGlowTid) clearTimeout(rateGlowTid);
+    rateGlowTid = setTimeout(()=>{ input.classList.remove('glow'); }, 120);
+  }, { passive:false });
+}
+
+addWheelSpin(rateInput, 0.1, 0.1, null, (v)=>{ video.playbackRate = v; });
+addWheelSpin(trailNInput, 1, 0, null, ()=>{ drawOverlay(); drawTimeline(); });
+addWheelSpin(k0Input, 0.1, 0, null);
+addWheelSpin(k1Input, 0.1, 0, null);
+addWheelSpin(k2Input, 0.1, 0, null);
+addWheelSpin(k3Input, 0.1, 0, null);
+
+// CSV 読み込み（UI）
+importBtn.addEventListener('click', ()=> importInput.click());
+importInput.addEventListener('change', (e)=>{
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const replace = confirm('Do you want to replace current tracked data by the new track file? \n OK: Replace / Cancel: Add');
+  importCsvFile(file, { replace });
+  importInput.value = '';
+});
+
+// CSV読み込み本体
+function importCsvFile(file, { replace=false }={}) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const text = String(reader.result || '');
+      const { added, skipped, ids, fpsEstimate } = importCsvText(text, { replace });
+      let msg = `CSV loaded: Added ${added} (manual) lines`;
+      if (skipped) msg += ` / Skipped ${skipped} lines`;
+      if (ids.size) msg += ` / ID: ${Array.from(ids).join(',')}`;
+      if (isFinite(fpsEstimate) && fpsEstimate > 0) {
+        msg += ` / Estimated FPS≈${fpsEstimate.toFixed(3)}（Modify manually if neccessary）`;
+      }
+      statusEl.textContent = msg;
+      drawOverlay();
+      drawTimeline();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load the CSV file. Check the file format.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function importCsvText(text, { replace=false }={}) {
+  if (replace) {
+    for (const id of Object.keys(tracks)) delete tracks[id];
+    undoStack = [];
+    colorIndexById.clear();
+    nextColorIdx = 0;
+    currentId = null;
+  }
+
+  const lines = text.split(/\r?\n/);
+  let headerIndex = -1;
+
+  // ヘッダ探索（先頭〜5行）
+  for (let i = 0; i < Math.min(1000, lines.length); i++) {
+    const cols = (lines[i] || '').trim();
+    if (!cols) continue;
+    const arr = splitCsvLine(cols);
+    if (arr && arr.length >= 4) {
+      const low = arr.map(s => s.trim().toLowerCase());
+      if (low.includes('id') && low.includes('frame') && low.includes('x') && low.includes('y')) {
+        headerIndex = i; break;
+      }
+    }
+  }
+
+  // 列インデックス決定
+  let idxId = 0, idxFrame = 1, idxTime = -1, idxX = 2, idxY = 3, idxSource = -1;
+  if (headerIndex >= 0) {
+    const h = splitCsvLine(lines[headerIndex]).map(s => s.trim().toLowerCase());
+    idxId = h.indexOf('id');
+    idxFrame = h.indexOf('frame');
+    idxTime = h.indexOf('time_sec');
+    idxX = h.indexOf('x');
+    idxY = h.indexOf('y');
+    idxSource = h.indexOf('source');
+  } else {
+    // ヘッダなしと判断：末尾が manual/interp で列数>=5 なら
+    // 「id,frame,time_sec,x,y,source」と推定する
+    for (let i = 0; i < Math.min(50, lines.length); i++){
+      const raw = (lines[i]||'').trim();
+      if (!raw) continue;
+      const arr = splitCsvLine(raw).map(s=>s.trim());
+      if (arr.length >= 5) {
+        const last = (arr[arr.length-1]||'').toLowerCase();
+        if (last === 'manual' || last === 'interp') {
+          idxId = 0; idxFrame = 1; idxTime = 2; idxX = 3; idxY = 4; idxSource = arr.length-1;
+          break;
+        }
+      }
+    }
+  }
+
+  let added = 0, skipped = 0;
+  const ids = new Set();
+  const fpsSamples = [];
+  let prevFrame = null, prevTime = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    if (i === headerIndex) continue;
+    const raw = (lines[i] || '');
+    if (!raw || /^\s*$/.test(raw)) continue;
+
+    const arr = splitCsvLine(raw);
+    if (!arr || arr.length < 4) { skipped++; continue; }
+
+    const id = (idxId >= 0 ? arr[idxId] : arr[0]).trim();
+    if (id.toLowerCase() === 'id') { skipped++; continue; } // 迷い込んだヘッダ行をスキップ
+    const frameStr = (idxFrame >= 0 ? arr[idxFrame] : arr[1]).trim();
+    const xStr = (idxX >= 0 ? arr[idxX] : arr[2]).trim();
+    const yStr = (idxY >= 0 ? arr[idxY] : arr[3]).trim();
+    const sourceStr = (idxSource >= 0 ? (arr[idxSource] || '').trim().toLowerCase() : 'manual');
+    const timeStr = (idxTime >= 0 ? (arr[idxTime] || '').trim() : '');
+
+    const f = Number(frameStr), x = Number(xStr), y = Number(yStr);
+    if (!id || !Number.isFinite(f) || !Number.isFinite(x) || !Number.isFinite(y)) { skipped++; continue; }
+    if (sourceStr && sourceStr !== 'manual') { continue; } // manualのみ採用
+
+    if (!tracks[id]) tracks[id] = { color: colorForId(id), manual: new Map(), interp: new Map() };
+    tracks[id].manual.set(f, { x, y });
+    ids.add(id); added++;
+
+    const t = Number(timeStr);
+    if (Number.isFinite(t)) {
+      if (prevFrame != null && prevTime != null) {
+        const df = Math.abs(f - prevFrame), dt = Math.abs(t - prevTime);
+        if (df > 0 && dt > 0) fpsSamples.push(df / dt);
+      }
+      prevFrame = f; prevTime = t;
+    }
+  }
+
+  // 各IDの補間を再生成
+  for (const id of ids) recomputeInterpolationForId(id);
+
+  // 推定FPS（中央値）
+  let fpsEstimate = NaN;
+  if (fpsSamples.length) {
+    fpsSamples.sort((a, b) => a - b);
+    const mid = Math.floor(fpsSamples.length / 2);
+    fpsEstimate = fpsSamples.length % 2 ? fpsSamples[mid] : (fpsSamples[mid - 1] + fpsSamples[mid]) / 2;
+  }
+
+  // 編集IDが未設定なら何か一つ
+  if (!currentId) {
+    const firstId = ids.values().next().value || '1';
+    setCurrentId(String(firstId));
+  }
+
+  return { added, skipped, ids, fpsEstimate };
+}
+
+// =========================================================
+// ページ離脱確認（データがある場合のみ）
+// =========================================================
+function hasAnyData(){
+  return Object.values(tracks).some(tr => (tr.manual && tr.manual.size) || (tr.interp && tr.interp.size));
+}
+window.addEventListener('beforeunload', (e)=>{
+  if (!hasAnyData()) return;
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+// =========================================================
+// 全消去
+// =========================================================
+clearBtn.addEventListener('click', ()=>{
+  if (!confirm('Are you sure you want to delete all the track data?')) return;
+  for (const id of Object.keys(tracks)){ delete tracks[id]; }
+  undoStack = [];
+  // 色割り当てもリセット
+  colorIndexById.clear();
+  nextColorIdx = 0;
+  setCurrentId('1');
+  drawOverlay();
+  drawTimeline();
+});
+
+// =========================================================
+// ステータス：座標プレビュー
+// =========================================================
+overlay.addEventListener('mousemove', (e)=>{
+  if (!video.src) return;
+  const fps = Math.max(1, +fpsInput.value || 30);
+  const frame = Math.round(video.currentTime * fps);
+  const p = screenToVideoCoord(e.clientX, e.clientY);
+  statusEl.textContent = `t=${video.currentTime.toFixed(3)}s (frame ${frame}) | x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`;
+});
+
+// タイムラインクリックでシーク
+timelineCanvas.addEventListener('click', (e)=>{
+  if (!video.src) return;
+  const rect = timelineCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  // まず●ヒット時はそのフレームにスナップ
+  const hit = timelineHitTest(x, y, 6);
+  if (hit){
+    const fps = Math.max(1, +fpsInput.value || 30);
+    const t = hit.frame / fps;
+    if (isFinite(t)){
+      video.currentTime = t;
+      drawOverlay();
+      drawTimeline();
+      return;
+    }
+  }
+  // それ以外は位置から時刻に変換してシーク
+  const w = timelineCanvas.width;
+  const padL=60, padR=10;
+  const innerW = Math.max(1, w - padL - padR);
+  const duration = Number.isFinite(video.duration) && video.duration>0 ? video.duration : 0;
+  const ratio = Math.min(1, Math.max(0, (x - padL) / innerW));
+  const t = duration * ratio;
+  if (isFinite(t)){
+    video.currentTime = t;
+    drawOverlay();
+    drawTimeline();
+  }
+});
+
+// ホバーでポインタに（●の上）
+timelineCanvas.addEventListener('mousemove', (e)=>{
+  const rect = timelineCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const hit = timelineHitTest(x, y, 6);
+  timelineCanvas.style.cursor = hit ? 'pointer' : 'default';
+});
+
+timelineCanvas.addEventListener('mouseleave', ()=>{
+  timelineCanvas.style.cursor = 'default';
+});
+
+document.addEventListener('wheel', (e)=>{
+  if (!video.src) return;
+  const tag = (e.target && e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea') return;
+  if (e.ctrlKey && e.shiftKey){
+    e.preventDefault();
+    const dir = e.deltaY < 0 ? -1 : 1;
+    const k1 = +k1Input.value || 0;
+    const t = Math.max(0, Math.min(video.duration||Infinity, (video.currentTime||0) + dir*k1));
+    video.currentTime = t;
+    drawOverlay();
+    drawTimeline();
+    return;
+  }
+  if (e.shiftKey){
+    e.preventDefault();
+    const dir = e.deltaY < 0 ? 1 : -1;
+    let r = Math.max(0.1, +rateInput.value || 1);
+    r = Math.max(0.1, Math.round((r + dir*0.1)*10)/10);
+    rateInput.value = String(r);
+    video.playbackRate = r;
+    rateInput.classList.add('glow');
+    if (rateGlowTid) clearTimeout(rateGlowTid);
+    rateGlowTid = setTimeout(()=>{ rateInput.classList.remove('glow'); }, 120);
+    return;
+  }
+  if (e.ctrlKey){
+    e.preventDefault();
+    const dir = e.deltaY < 0 ? -1 : 1;
+    const k0 = +k0Input.value || 0;
+    const t = Math.max(0, Math.min(video.duration||Infinity, (video.currentTime||0) + dir*k0));
+    video.currentTime = t;
+    drawOverlay();
+    drawTimeline();
+    return;
+  }
+}, { passive:false });
+
+timelineCanvas.addEventListener('wheel', (e)=>{
+  e.preventDefault();
+  if (!video.src) return;
+  if (e.ctrlKey || e.shiftKey) return;
+  const dir = e.deltaY < 0 ? -1 : 1;
+  const k0 = +k0Input.value || 0;
+  const t = Math.max(0, Math.min(video.duration||Infinity, (video.currentTime||0) + dir*k0));
+  video.currentTime = t;
+  drawOverlay();
+  drawTimeline();
+}, { passive:false });
+
+function timelineHitTest(x, y, tol=6){
+  const t2 = tol*tol;
+  for (let i=0;i<timelinePoints.length;i++){
+    const p = timelinePoints[i];
+    const dx = x - p.x, dy = y - p.y;
+    if (dx*dx + dy*dy <= t2) return p;
+  }
+  return null;
+}
+// =========================================================
+// 表示リセット（ズーム・パン）
+// =========================================================
+function resetView(){
+  scale = 1.0;
+  panX = 0; panY = 0;
+  applyStageTransform();
+  drawOverlay();
+}
+resetViewBtn.addEventListener('click', resetView);
+goStartBtn.addEventListener('click', ()=>{
+  if (!video.src) return;
+  video.currentTime = 0;
+  updateToolbarTime();
+  drawOverlay();
+});
+
+// CSV 行を安全に分割（ダブルクオート対応）
+function splitCsvLine(line){
+  const out=[]; let cur=''; let inQ=false;
+  for (let i=0;i<line.length;i++){
+    const ch=line[i];
+    if (inQ){
+      if (ch==='"'){
+        if (line[i+1]==='"'){ cur+='"'; i++; }
+        else { inQ=false; }
+      } else cur+=ch;
+    } else {
+      if (ch===','){ out.push(cur); cur=''; }
+      else if (ch==='"'){ inQ=true; }
+      else cur+=ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+//ここから＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+function fitTimelineCanvas(){
+  const rect = timelineEl.getBoundingClientRect();
+  const w = Math.max(1, Math.floor(rect.width));
+  const h = Math.max(1, Math.floor(rect.height - 24));
+  timelineCanvas.width = w;
+  timelineCanvas.height = Math.max(1, h);
+}
+
+function drawTimeline(){
+  const ctx = tctx;
+  const w = timelineCanvas.width, h = timelineCanvas.height;
+  ctx.clearRect(0,0,w,h);
+  if (!w || !h) return;
+
+  const padL=60, padR=10, padT=6, padB=6;
+  const innerW = Math.max(1, w - padL - padR);
+  const innerH = Math.max(1, h - padT - padB);
+
+  timelinePoints = []; // ヒットテスト用に毎回作り直す
+
+  // 外枠
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
+  ctx.strokeRect(padL, padT, innerW, innerH);
+
+  const ids = Object.keys(tracks);
+  const n = Math.max(1, ids.length);
+  const duration = (Number.isFinite(video.duration) && video.duration>0) ? video.duration : 0;
+  const fps = Math.max(1, +fpsInput.value || 30);
+
+  const tToX = (t)=> padL + (innerW) * (duration ? (t/duration) : 0);
+  const frameToX = (f)=> tToX(f / fps);
+  const rowH = innerH / n;
+  const yForIndex = (i)=> padT + rowH*(i+0.5);
+
+  // 時間目盛り（下）
+  const tickN = 6;
+  ctx.fillStyle = '#888'; ctx.textBaseline = 'alphabetic'; ctx.font = '12px system-ui';
+  for (let i=0;i<=tickN;i++){
+    const t = duration * i / tickN;
+    const x = tToX(t);
+    ctx.strokeStyle = '#333';
+    ctx.beginPath(); ctx.moveTo(x, padT+innerH); ctx.lineTo(x, padT+innerH+4); ctx.stroke();
+    ctx.fillText(`${t.toFixed(1)}s`, x-12, padT+innerH+14);
+  }
+
+  // 各オブジェクト行
+  ids.forEach((id, i)=>{
+    const y = yForIndex(i);
+    // 行ラベル
+    ctx.fillStyle = (id===currentId)? '#fff' : '#bbb';
+    ctx.fillText(id, 8, y);
+    // ベースライン
+    ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL+innerW, y); ctx.stroke();
+
+    const tr = tracks[id]; if (!tr) return;
+    const frames = Array.from(tr.manual.keys()).sort((a,b)=>a-b);
+    if (!frames.length) return;
+
+    // 折れ線
+    ctx.strokeStyle = tr.color; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(frameToX(frames[0]), y);
+    for (let k=1;k<frames.length;k++) ctx.lineTo(frameToX(frames[k]), y);
+    ctx.stroke();
+
+    // 点
+    ctx.fillStyle = tr.color;
+    for (const f of frames){
+      const x = frameToX(f);
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+      // ヒットテスト用に保存
+      timelinePoints.push({ x, y, frame: f, id });
+    }
+
+    // 現在のIDを薄い枠で強調
+    if (id===currentId){
+      ctx.save();
+      ctx.setLineDash([4,3]); ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+      ctx.strokeRect(padL, y - rowH/2 + 1, innerW, rowH - 2);
+      ctx.restore();
+    }
+  });
+
+  // 現在時刻ライン
+  const xNow = tToX(video.currentTime || 0);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(xNow, padT); ctx.lineTo(xNow, padT+innerH); ctx.stroke();
+}
+//ここまで＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+</script>
+</body>
+</html>
