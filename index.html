@@ -113,7 +113,7 @@
 
     /* Hero */
     .hero{
-      display: grid;
+      display: block;
       grid-template-columns: 1.1fr 0.9fr;
       gap: 22px;
       align-items: start;
@@ -303,9 +303,8 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
         <div>
-          <h1>Manual Trajectory Tracker <span class="sub">Browser-based manual tracking tool</span></h1>
+          <h1>ManuTrace</h1>
         </div>
       </div>
 
@@ -318,9 +317,7 @@
 
     <section class="hero">
       <div class="card heroText">
-        <div class="kicker"><span class="dot" aria-hidden="true"></span> Single-file app · Works offline</div>
-
-        <h2>Annotate trajectories with precision.</h2>
+        <h2>Interface for manually extracting movement trajectory from a movie</h2>
         <p>
           A lightweight tool for manual trajectory annotation in videos and images.
           Designed for research workflows where automated tracking is difficult and manual correction is essential.
@@ -345,21 +342,6 @@
         <div class="caption">
             Screenshot of the ManuTrace user interface.
         </div>
-      </div>
-    </section>
-
-    <section class="grid">
-      <div class="card mini">
-        <h3>Fast to start</h3>
-        <p>Open in a browser, drag & drop media, and begin annotation immediately.</p>
-      </div>
-      <div class="card mini">
-        <h3>Keyboard & mouse friendly</h3>
-        <p>Point placement, dragging edits, and shortcut-driven navigation for efficiency.</p>
-      </div>
-      <div class="card mini">
-        <h3>CSV in/out</h3>
-        <p>Export trajectories to CSV and re-import them for continued editing or analysis.</p>
       </div>
     </section>
 
