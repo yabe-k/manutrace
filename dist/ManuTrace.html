@@ -215,6 +215,22 @@ const goStartBtn = document.getElementById('goStart');
 const timelineHInput = document.getElementById('timelineH');
 let rateGlowTid = null;
 let undoStack = [];
+const BLINK_ON_MS = 930;
+const BLINK_OFF_MS = 70;
+const BLINK_PERIOD_MS = BLINK_ON_MS + BLINK_OFF_MS;
+let blinkTimer = null;
+function isBlinkVisible(){
+  const t = performance.now() % BLINK_PERIOD_MS;
+  return t < BLINK_ON_MS;
+}
+function ensureBlinkTimer(){
+  if (blinkTimer) return;
+  blinkTimer = setInterval(()=>{
+    if (!video.src){ clearInterval(blinkTimer); blinkTimer = null; return; }
+    if (!video.paused) return;
+    drawOverlay();
+  }, 50);
+}
 function pushUndo(a){
   undoStack.push(a);
   if (undoStack.length > 3) undoStack.shift();
@@ -286,6 +302,8 @@ function loadVideoFile(file){
 }
 
 function handleLoadedMeta(){
+  ensureBlinkTimer();
+  ensureBlinkTimer();
   fitCanvasToVideo(true);
   video.playbackRate = Math.max(0.1, +rateInput.value || 1);
   statusEl.textContent = `Loaded: ${Math.round(video.duration*10)/10}s, ${video.videoWidth}×${video.videoHeight}`;
@@ -354,6 +372,8 @@ function setCurrentId(id){
   currentId = id;
   nowIdEl.textContent = id;
   nowDotEl.style.background = tracks[id].color;
+  ensureBlinkTimer();
+  ensureBlinkTimer();
 }
 
 // 初期ID
@@ -599,6 +619,8 @@ const curFrame = Math.round((video.currentTime || 0) * fps);
 const trailN = Math.max(0, +trailNInput.value || 0);
 
 for (const [id, tr] of Object.entries(tracks)){
+  if (id === currentId && !isBlinkVisible()) continue;
+  if (id === currentId && !isBlinkVisible()) continue;
   ctx.lineWidth = 2;
   ctx.strokeStyle = tr.color; ctx.fillStyle = tr.color;
   const pts = [];
