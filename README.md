@@ -24,9 +24,11 @@ The tool runs entirely in the browser, requires no installation, and supports in
 
 ### 1. Open the Application
 
-Download the HTML file from this repository and open it in a modern web browser  
-(Chrome, Firefox, or Edge recommended).
+* Use in online environment
+  * Open https://yabe-k.github.io/manutrace/dist/ManuTrace.html
 
+* Use in offline environment
+  * Download the HTML file `dist/ManuTrace.html` from this repository and open it in a modern web browser (Chrome, Firefox, or Edge recommended).
 No server or additional dependencies are required.
 
 ---
