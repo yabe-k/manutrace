@@ -104,6 +104,16 @@ i{font-size: 20px; margin: 5px;}
     </div>
     <div class="hint">Press numeric/alphabet keys to switch object ID to edit</div>
     <div class="hint">Click on video to set position of the object</div>
+    
+    <div class="sep"></div>
+    
+    <div class="row" style="align-items:flex-start">
+      <label style="min-width:unset;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:8px">
+        <input id="autoSeekAfterClick" type="checkbox" />
+        Auto seek after click
+      </label>
+    </div>
+    <div class="hint">When enabled, the video seeks forward by the same amount as an arrow key press after each recorded point.</div>
 
     <div class="sep"></div>
 
@@ -117,6 +127,9 @@ i{font-size: 20px; margin: 5px;}
       <label>Save name</label>
       <div style="display:flex;flex-direction:column;gap:6px;flex:1">
         <input id="saveName" type="text" placeholder="tracks" />
+        <label style="min-width:unset;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
+          <input id="addSourceFileName" type="checkbox" checked />Add source file name
+        </label>
         <label style="min-width:unset;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
           <input id="addTimestamp" type="checkbox" checked />Add timestamp
         </label>
@@ -206,6 +219,7 @@ const k3Input     = document.getElementById('k3');
 const rateInput  = document.getElementById('rateInput');
 const saveNameInput = document.getElementById('saveName');
 const addTimestampChk = document.getElementById('addTimestamp');
+const addSourceFileNameChk = document.getElementById('addSourceFileName');
 const exportBtn   = document.getElementById('exportCsv');
 const importBtn   = document.getElementById('importCsvBtn');
 const importInput = document.getElementById('importCsvInput');
@@ -213,12 +227,17 @@ const clearBtn   = document.getElementById('clearAll');
 const resetViewBtn = document.getElementById('resetView');
 const goStartBtn = document.getElementById('goStart');
 const timelineHInput = document.getElementById('timelineH');
+const autoSeekAfterClickChk = document.getElementById('autoSeekAfterClick');
 let rateGlowTid = null;
 let undoStack = [];
 const BLINK_ON_MS = 930;
 const BLINK_OFF_MS = 70;
 const BLINK_PERIOD_MS = BLINK_ON_MS + BLINK_OFF_MS;
 let blinkTimer = null;
+
+//動画ファイル名を保持
+let loadedVideoFileName = null;
+
 function isBlinkVisible(){
   const t = performance.now() % BLINK_PERIOD_MS;
   return t < BLINK_ON_MS;
@@ -289,6 +308,7 @@ let objectUrl = null;
 
 function loadVideoFile(file){
   try{
+    loadedVideoFileName = file.name;// 動画ファイル名を保存
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(file);
     video.src = objectUrl;
@@ -577,8 +597,16 @@ overlay.addEventListener('click', (e)=>{
   recomputeInterpolationForId(currentId);
 
   statusEl.textContent = `ID ${currentId}: Added a point at frame ${frame} (x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)})`;
+  
+  // 自動シークが有効なら進める
+  if (autoSeekAfterClickChk && autoSeekAfterClickChk.checked){
+    const k0 = Math.max(0, +k0Input.value || 0);
+    video.currentTime = Math.max(0, Math.min(video.duration||Infinity, video.currentTime + k0));
+  }
+  
   drawOverlay();
   drawTimeline();
+  updateToolbarTime();
 });
 
 // =========================================================
@@ -792,6 +820,8 @@ function exportCSV(){
   let base = (saveNameInput && saveNameInput.value != null) ? String(saveNameInput.value).trim() : '';
   if (!base) base = 'tracks';
   base = base.replace(/[\/:*?"<>|]+/g, '_');
+  const sourceFileName = (addSourceFileNameChk && addSourceFileNameChk.checked && loadedVideoFileName) ? `_${loadedVideoFileName.replace(/[\/:*?"<>|]+/g, '_')}` : '';
+  base += sourceFileName;
   const addTs = !!(addTimestampChk && addTimestampChk.checked);
   const ts = new Date().toISOString().replace(/[:.]/g,'-');
   const name = addTs ? `${base}_${ts}` : base;
