@@ -930,10 +930,15 @@
       }
 
       const frontEnd = frontFrames[frontFrames.length - 1];
+      const backStart = backFrames[0];
       const backEnd = backFrames[backFrames.length - 1];
 
       if (backEnd <= frontEnd) {
         if (!confirm(`The time range of ID ${backId} is completely contained within ID ${frontId}.\nMerging will simply delete ID ${backId} without adding new points to ID ${frontId}.\nAre you sure you want to proceed?`)) {
+          return;
+        }
+      } else if (backStart <= frontEnd) {
+        if (!confirm(`The time ranges of ID ${frontId} and ID ${backId} overlap.\nPoints in ID ${backId} that fall within the range of ID ${frontId} (up to frame ${frontEnd}) will be discarded.\nAre you sure you want to proceed?`)) {
           return;
         }
       }
