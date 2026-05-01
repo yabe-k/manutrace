@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 
 <head>
   <meta charset="utf-8" />
@@ -243,11 +243,19 @@
     }
 
     .timeline .handle>*:hover {
-      background: #1c1c1c;
+      background: #2c2c2c;
     }
 
     .timelineHandleOperations {
       margin-left: 20px;
+    }
+
+    .mergeInput {
+      width: 50px;
+      height: 11px;
+      margin-left: 5px;
+      margin-top: 4px;
+      font-size: 10px;
     }
 
     .timeline canvas {
@@ -287,7 +295,7 @@
       <div class="sep"></div>
       <h3>Video settings</h3>
       <div class="row">
-        <label>FPS（Estimated/manually entered）</label>
+        <label>FPS (Estimated/manually entered)</label>
         <input id="fpsInput" type="number" min="1" value="30" />
       </div>
       <div class="row">
@@ -407,7 +415,7 @@
         <div class="dz-hint">Drop a movie here</div>
         <div id="timeline" class="timeline collapsed">
           <div id="timelineHandle" class="handle">
-            <span id="timelineHandleLabel">Timeline ▾（click to collapse）</span>
+            <span id="timelineHandleLabel">Timeline ▾ (click to collapse)</span>
             <div id="timelineSplitter" class="timelineHandleOperations" title="Split the track at the current frame">
               <i class="fa-solid fa-scissors" style="font-size: 12px;"></i>
               split
@@ -415,6 +423,8 @@
             <div id="timelineMerger" class="timelineHandleOperations">
               <i class="fa-solid fa-code-merge" style="font-size: 12px;"></i>
               merge
+              <input type="text" class="mergeInput" id="mergeId1" placeholder="ID1">
+              <input type="text" class="mergeInput" id="mergeId2" placeholder="ID2">
             </div>
             <div id="timelineDelete" class="timelineHandleOperations" title="Delete the selected object">
               <i class="fa-solid fa-trash" style="font-size: 12px;"></i>
@@ -502,6 +512,27 @@
     function undoLast() {
       const a = undoStack.pop();
       if (!a) return;
+
+      if (a.type === 'merge') {
+        tracks[a.frontId].manual = new Map(a.frontTrackOriginal.manual);
+        tracks[a.frontId].interp = new Map(a.frontTrackOriginal.interp);
+        
+        tracks[a.backId] = {
+          color: a.backTrackOriginal.color,
+          manual: new Map(a.backTrackOriginal.manual),
+          interp: new Map(a.backTrackOriginal.interp)
+        };
+        
+        recomputeInterpolationForId(a.frontId);
+        recomputeInterpolationForId(a.backId);
+        
+        if (statusEl) {
+          statusEl.textContent = `Undo: Merge ID ${a.backId} into ${a.frontId}`;
+        }
+        drawOverlay();
+        drawTimeline();
+        return;
+      }
 
       if (a.type === 'split') {
         const origTr = tracks[a.originalId];
@@ -790,7 +821,7 @@
 
     timelineHandleLabel.addEventListener('click', () => {
       setTimelineExpanded(!timelineExpanded);
-      timelineHandleLabel.textContent = timelineExpanded ? 'Timeline ▾（click to collapse）' : 'Timeline ▴（click to expand）';
+      timelineHandleLabel.textContent = timelineExpanded ? 'Timeline ▾ (click to collapse)' : 'Timeline ▴ (click to expand)';
     });
 
     timelineSplitter.addEventListener('click', () => {
@@ -826,6 +857,99 @@
       recomputeInterpolationForId(currentId);
       recomputeInterpolationForId(newId);
 
+      drawOverlay();
+      drawTimeline();
+    });
+
+    timelineMerger.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const id1 = document.getElementById('mergeId1').value.trim();
+      const id2 = document.getElementById('mergeId2').value.trim();
+
+      if (!id1 || !id2) {
+        alert("ID not entered. Please specify two IDs to merge.");
+        return;
+      }
+      if (!tracks[id1] || !tracks[id2]) {
+        alert("The specified ID does not exist.");
+        return;
+      }
+      if (id1 === id2) {
+        alert("Please specify different IDs.");
+        return;
+      }
+
+      const tr1 = tracks[id1];
+      const tr2 = tracks[id2];
+
+      const frames1 = Array.from(tr1.manual.keys()).sort((a, b) => a - b);
+      const frames2 = Array.from(tr2.manual.keys()).sort((a, b) => a - b);
+
+      if (frames1.length === 0 || frames2.length === 0) {
+        alert("No records exist in the track.");
+        return;
+      }
+
+      const start1 = frames1[0];
+      const start2 = frames2[0];
+
+      let frontId, backId, frontTr, backTr, frontFrames, backFrames;
+
+      // 最初のレコードが早い方を優先（同じ場合はid1を優先）
+      if (start1 <= start2) {
+        frontId = id1; backId = id2;
+        frontTr = tr1; backTr = tr2;
+        frontFrames = frames1; backFrames = frames2;
+      } else {
+        frontId = id2; backId = id1;
+        frontTr = tr2; backTr = tr1;
+        frontFrames = frames2; backFrames = frames1;
+      }
+
+      const frontEnd = frontFrames[frontFrames.length - 1];
+
+      // Undoのためにマージ前の状態を保存
+      pushUndo({
+        type: 'merge',
+        frontId: frontId,
+        backId: backId,
+        frontTrackOriginal: {
+          color: frontTr.color,
+          manual: new Map(frontTr.manual),
+          interp: new Map(frontTr.interp)
+        },
+        backTrackOriginal: {
+          color: backTr.color,
+          manual: new Map(backTr.manual),
+          interp: new Map(backTr.interp)
+        }
+      });
+
+      // 前トラックの最後のレコードより後の他方トラックのレコードを追加
+      for (const f of backFrames) {
+        if (f > frontEnd) {
+          frontTr.manual.set(f, backTr.manual.get(f));
+        }
+      }
+
+      // 後トラックを削除
+      delete tracks[backId];
+      
+      // 補間を再計算
+      recomputeInterpolationForId(frontId);
+
+      // もし削除したIDが現在のIDだった場合、残した方に切り替える
+      if (currentId === backId) {
+        setCurrentId(frontId);
+      }
+
+      // 入力欄をクリア
+      document.getElementById('mergeId1').value = '';
+      document.getElementById('mergeId2').value = '';
+
+      if (statusEl) {
+        statusEl.textContent = `Merged ID ${backId} into ${frontId}`;
+      }
       drawOverlay();
       drawTimeline();
     });
@@ -1118,7 +1242,7 @@
           drawOverlay();
           drawTimeline();
         } else {
-          statusEl.textContent = `Nothing to delete（ID ${currentId}, frame ${frame}）`;
+          statusEl.textContent = `Nothing to delete (ID ${currentId}, frame ${frame})`;
         }
         drawTimeline();
         return;
@@ -1228,7 +1352,7 @@
           if (skipped) msg += ` / Skipped ${skipped} lines`;
           if (ids.size) msg += ` / ID: ${Array.from(ids).join(',')}`;
           if (isFinite(fpsEstimate) && fpsEstimate > 0) {
-            msg += ` / Estimated FPS≈${fpsEstimate.toFixed(3)}（Modify manually if neccessary）`;
+            msg += ` / Estimated FPS≈${fpsEstimate.toFixed(3)} (Modify manually if necessary)`;
           }
           statusEl.textContent = msg;
           drawOverlay();
