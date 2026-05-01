@@ -1415,13 +1415,30 @@
     addWheelSpin(k3Input, 0.1, 0, null);
 
     // CSV 読み込み（UI）
-    importBtn.addEventListener('click', () => importInput.click());
-    importInput.addEventListener('change', (e) => {
-      const file = e.target.files && e.target.files[0];
+    function handleImportAction(file) {
       if (!file) return;
+      if (!(file.name.toLowerCase().endsWith('.csv') || file.type === 'text/csv')) {
+        alert('Please select or drop a CSV file.');
+        return;
+      }
       const replace = confirm('Do you want to replace current tracked data by the new track file? \n OK: Replace / Cancel: Add');
       importCsvFile(file, { replace });
+    }
+
+    importBtn.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', (e) => {
+      handleImportAction(e.target.files && e.target.files[0]);
       importInput.value = '';
+    });
+
+    importBtn.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    importBtn.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleImportAction(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
     });
 
     // CSV読み込み本体
