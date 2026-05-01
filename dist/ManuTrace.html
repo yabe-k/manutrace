@@ -250,7 +250,8 @@
       margin-left: 20px;
     }
 
-    .mergeInput {
+    .mergeInput,
+    .renameInput {
       width: 50px;
       height: 11px;
       margin-left: 5px;
@@ -426,6 +427,11 @@
               <input type="text" class="mergeInput" id="mergeId1" placeholder="ID1">
               <input type="text" class="mergeInput" id="mergeId2" placeholder="ID2">
             </div>
+            <div id="timelineRename" class="timelineHandleOperations" title="Rename the selected object">
+              <i class="fa-solid fa-pen" style="font-size: 12px;"></i>
+              rename
+              <input type="text" class="renameInput" id="renameInput" placeholder="New ID">
+            </div>
             <div id="timelineDelete" class="timelineHandleOperations" title="Delete the selected object">
               <i class="fa-solid fa-trash" style="font-size: 12px;"></i>
               delete
@@ -461,6 +467,8 @@
     const timelineSplitter = document.getElementById('timelineSplitter');
     const timelineMerger = document.getElementById('timelineMerger');
     const timelineDelete = document.getElementById('timelineDelete');
+    const timelineRename = document.getElementById('timelineRename');
+    const renameInput = document.getElementById('renameInput');
     const timelineCanvas = document.getElementById('timelineCanvas');
     const tctx = timelineCanvas.getContext('2d');
     let timelinePoints = []; // タイムライン上の●の座標キャッシュ（ヒットテスト用）
@@ -554,6 +562,21 @@
         tracks[a.id] = a.track;
         setCurrentId(a.id);
         statusEl.textContent = `Undo: Restored deleted ID ${a.id}`;
+        drawOverlay();
+        drawTimeline();
+        return;
+      }
+
+      if (a.type === 'renameTrack') {
+        const track = tracks[a.newId];
+        tracks[a.oldId] = track;
+        delete tracks[a.newId];
+        if (colorIndexById.has(a.newId)) {
+          colorIndexById.set(a.oldId, colorIndexById.get(a.newId));
+          colorIndexById.delete(a.newId);
+        }
+        setCurrentId(a.oldId);
+        statusEl.textContent = `Undo: Renamed ID ${a.newId} back to ${a.oldId}`;
         drawOverlay();
         drawTimeline();
         return;
@@ -977,6 +1000,45 @@
         }
         drawOverlay();
         drawTimeline();
+      }
+    });
+
+    function performRename() {
+      const newId = renameInput.value.trim();
+      if (!newId) return;
+      if (!currentId || !tracks[currentId]) return;
+      if (newId === currentId) return;
+      if (tracks[newId]) {
+        alert(`ID "${newId}" already exists.`);
+        return;
+      }
+
+      const oldId = currentId;
+      const track = tracks[oldId];
+      tracks[newId] = track;
+      delete tracks[oldId];
+
+      if (colorIndexById.has(oldId)) {
+        colorIndexById.set(newId, colorIndexById.get(oldId));
+        colorIndexById.delete(oldId);
+      }
+
+      pushUndo({ type: 'renameTrack', oldId: oldId, newId: newId });
+      setCurrentId(newId);
+      renameInput.value = '';
+      statusEl.textContent = `Renamed ID ${oldId} to ${newId}`;
+      drawOverlay();
+      drawTimeline();
+    }
+
+    timelineRename.addEventListener('click', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      performRename();
+    });
+
+    renameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        performRename();
       }
     });
 
