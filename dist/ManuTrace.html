@@ -229,16 +229,25 @@
       height: 24px;
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 0 8px;
-      cursor: pointer;
       user-select: none;
       color: #bbb;
       font-size: 12px
     }
 
-    .timeline .handle:hover {
-      background: #151515
+    .timeline .handle>* {
+      height: 100%;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 8px;
+      cursor: pointer;
+    }
+
+    .timeline .handle>*:hover {
+      background: #1c1c1c;
+    }
+
+    .timelineHandleOperations {
+      margin-left: 20px;
     }
 
     .timeline canvas {
@@ -397,7 +406,21 @@
         </div>
         <div class="dz-hint">Drop a movie here</div>
         <div id="timeline" class="timeline collapsed">
-          <div id="timelineHandle" class="handle">Timeline ▾（click to collapse）</div>
+          <div id="timelineHandle" class="handle">
+            <span id="timelineHandleLabel">Timeline ▾（click to collapse）</span>
+            <div id="timelineSplitter" class="timelineHandleOperations" title="Split the track at the current frame">
+              <i class="fa-solid fa-scissors" style="font-size: 12px;"></i>
+              split
+            </div>
+            <div id="timelineMerger" class="timelineHandleOperations">
+              <i class="fa-solid fa-code-merge" style="font-size: 12px;"></i>
+              merge
+            </div>
+            <div id="timelineDelete" class="timelineHandleOperations" title="Delete the selected object">
+              <i class="fa-solid fa-trash" style="font-size: 12px;"></i>
+              delete
+            </div>
+          </div>
           <canvas id="timelineCanvas"></canvas>
         </div>
       </div>
@@ -424,6 +447,10 @@
     const nowDotEl = document.getElementById('nowDot');
     const timelineEl = document.getElementById('timeline');
     const timelineHandle = document.getElementById('timelineHandle');
+    const timelineHandleLabel = document.getElementById('timelineHandleLabel');
+    const timelineSplitter = document.getElementById('timelineSplitter');
+    const timelineMerger = document.getElementById('timelineMerger');
+    const timelineDelete = document.getElementById('timelineDelete');
     const timelineCanvas = document.getElementById('timelineCanvas');
     const tctx = timelineCanvas.getContext('2d');
     let timelinePoints = []; // タイムライン上の●の座標キャッシュ（ヒットテスト用）
@@ -470,11 +497,37 @@
     }
     function pushUndo(a) {
       undoStack.push(a);
-      if (undoStack.length > 3) undoStack.shift();
+      if (undoStack.length > 20) undoStack.shift();
     }
     function undoLast() {
       const a = undoStack.pop();
       if (!a) return;
+
+      if (a.type === 'split') {
+        const origTr = tracks[a.originalId];
+        const newTr = tracks[a.newId];
+        if (origTr && newTr) {
+          for (const [f, p] of newTr.manual.entries()) {
+            origTr.manual.set(f, p);
+          }
+          delete tracks[a.newId];
+          recomputeInterpolationForId(a.originalId);
+          statusEl.textContent = `Undo: Split ID ${a.originalId}`;
+          drawOverlay();
+          drawTimeline();
+        }
+        return;
+      }
+
+      if (a.type === 'deleteTrack') {
+        tracks[a.id] = a.track;
+        setCurrentId(a.id);
+        statusEl.textContent = `Undo: Restored deleted ID ${a.id}`;
+        drawOverlay();
+        drawTimeline();
+        return;
+      }
+
       const tr = tracks[a.id];
       if (!tr) return;
       if (a.prev) {
@@ -735,9 +788,72 @@
       }
     });
 
-    timelineHandle.addEventListener('click', () => {
+    timelineHandleLabel.addEventListener('click', () => {
       setTimelineExpanded(!timelineExpanded);
-      timelineHandle.textContent = timelineExpanded ? 'Timeline ▴（click to collapse）' : 'Timeline ▾（click to expand）';
+      timelineHandleLabel.textContent = timelineExpanded ? 'Timeline ▾（click to collapse）' : 'Timeline ▴（click to expand）';
+    });
+
+    timelineSplitter.addEventListener('click', () => {
+      if (!currentId || !tracks[currentId] || !video.src) return;
+
+      const fps = Math.max(1, +fpsInput.value || 30);
+      const splitFrame = Math.round((video.currentTime || 0) * fps);
+
+      const track = tracks[currentId];
+      const frames = Array.from(track.manual.keys()).sort((a, b) => a - b);
+
+      const beforeFrames = frames.filter(f => f < splitFrame);
+      const afterFrames = frames.filter(f => f >= splitFrame);
+
+      if (beforeFrames.length === 0 || afterFrames.length === 0) return;
+
+      let i = 1;
+      let newId = `${currentId}_${i}`;
+      while (tracks[newId]) {
+        i++;
+        newId = `${currentId}_${i}`;
+      }
+
+      tracks[newId] = { color: colorForId(newId), manual: new Map(), interp: new Map() };
+
+      for (const f of afterFrames) {
+        tracks[newId].manual.set(f, track.manual.get(f));
+        track.manual.delete(f);
+      }
+
+      pushUndo({ type: 'split', originalId: currentId, newId: newId });
+
+      recomputeInterpolationForId(currentId);
+      recomputeInterpolationForId(newId);
+
+      drawOverlay();
+      drawTimeline();
+    });
+
+    timelineDelete.addEventListener('click', () => {
+      if (!currentId || !tracks[currentId]) return;
+      if (confirm(`Are you sure you want to delete ID ${currentId}?`)) {
+        const id = currentId;
+        const tr = tracks[id];
+        pushUndo({
+          type: 'deleteTrack',
+          id: id,
+          track: {
+            color: tr.color,
+            manual: new Map(tr.manual),
+            interp: new Map(tr.interp)
+          }
+        });
+        delete tracks[id];
+        const remainingIds = Object.keys(tracks);
+        if (remainingIds.length > 0) {
+          setCurrentId(remainingIds[remainingIds.length - 1]);
+        } else {
+          setCurrentId('1');
+        }
+        drawOverlay();
+        drawTimeline();
+      }
     });
 
     function screenToVideoCoord(clientX, clientY) {
