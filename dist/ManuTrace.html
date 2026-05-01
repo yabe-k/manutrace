@@ -930,6 +930,13 @@
       }
 
       const frontEnd = frontFrames[frontFrames.length - 1];
+      const backEnd = backFrames[backFrames.length - 1];
+
+      if (backEnd <= frontEnd) {
+        if (!confirm(`The time range of ID ${backId} is completely contained within ID ${frontId}.\nMerging will simply delete ID ${backId} without adding new points to ID ${frontId}.\nAre you sure you want to proceed?`)) {
+          return;
+        }
+      }
 
       // Undoのためにマージ前の状態を保存
       pushUndo({
