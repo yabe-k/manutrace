@@ -612,6 +612,7 @@
       nowDotEl.style.background = tracks[id].color;
       ensureBlinkTimer();
       ensureBlinkTimer();
+      drawTimeline();
     }
 
     // 初期ID
@@ -1279,6 +1280,23 @@
       const rect = timelineCanvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+
+      // ラベル部分（x < padL）のクリック判定
+      const padL_label = 60, padT_label = 6, padB_label = 6;
+      if (x < padL_label) {
+        const ids = Object.keys(tracks);
+        if (ids.length > 0) {
+          const h = timelineCanvas.height;
+          const innerH = Math.max(1, h - padT_label - padB_label);
+          const rowH = innerH / ids.length;
+          const i = Math.floor((y - padT_label) / rowH);
+          if (i >= 0 && i < ids.length) {
+            setCurrentId(ids[i]);
+            return;
+          }
+        }
+      }
+
       // まず●ヒット時はそのフレームにスナップ
       const hit = timelineHitTest(x, y, 6);
       if (hit) {
@@ -1286,8 +1304,9 @@
         const t = hit.frame / fps;
         if (isFinite(t)) {
           video.currentTime = t;
+          setCurrentId(hit.id);
           drawOverlay();
-          drawTimeline();
+          // setCurrentId内でdrawTimelineが呼ばれるため、ここでは不要
           return;
         }
       }
@@ -1311,7 +1330,20 @@
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       const hit = timelineHitTest(x, y, 6);
-      timelineCanvas.style.cursor = hit ? 'pointer' : 'default';
+
+      let isLabelHit = false;
+      const padL_label = 60, padT_label = 6, padB_label = 6;
+      if (x < padL_label) {
+        const ids = Object.keys(tracks);
+        if (ids.length > 0) {
+          const h = timelineCanvas.height;
+          const innerH = Math.max(1, h - padT_label - padB_label);
+          const rowH = innerH / ids.length;
+          const i = Math.floor((y - padT_label) / rowH);
+          if (i >= 0 && i < ids.length) isLabelHit = true;
+        }
+      }
+      timelineCanvas.style.cursor = (hit || isLabelHit) ? 'pointer' : 'default';
     });
 
     timelineCanvas.addEventListener('mouseleave', () => {
@@ -1463,7 +1495,7 @@
       ids.forEach((id, i) => {
         const y = yForIndex(i);
         // 行ラベル
-        ctx.fillStyle = (id === currentId) ? '#fff' : '#bbb';
+        ctx.fillStyle = (id === currentId) ? '#fff' : '#777';
         ctx.fillText(id, 8, y);
         // ベースライン
         ctx.strokeStyle = '#1c1c1c'; ctx.lineWidth = 1;
@@ -1492,7 +1524,7 @@
         // 現在のIDを薄い枠で強調
         if (id === currentId) {
           ctx.save();
-          ctx.setLineDash([4, 3]); ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+          ctx.setLineDash([4, 3]); ctx.strokeStyle = '#999'; ctx.lineWidth = 1;
           ctx.strokeRect(padL, y - rowH / 2 + 1, innerW, rowH - 2);
           ctx.restore();
         }
