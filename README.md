@@ -1,22 +1,27 @@
 # ManuTrace
-An HTML-based inferface for manually extracting movement trajectory data from a movie
+
+An HTML-based interface for manually extracting movement trajectory data from a movie.
 
 A lightweight, browser-based tool for manually annotating and tracking object trajectories in images or videos.  
 This application is designed for behavioral and ecological studies where automated tracking is difficult or unreliable, and precise manual correction or annotation is required.
 
-The tool runs entirely in the browser, requires no installation, and supports intuitive mouse operations, keyboard shortcuts, and CSV-based data exchange.
+The tool runs entirely in the browser, requires no installation, and supports intuitive mouse operations, touch/pen gestures, keyboard shortcuts, and CSV-based data exchange.
 
 ---
 
 ## Features
 
-- Load images or videos directly via drag & drop
-- Manually add, move, and delete trajectory points
-- Support for multiple object IDs
-- Frame-by-frame navigation
-- CSV export and import of trajectory data
-- Undo / redo operations
-- Offline-capable (single-file HTML application)
+- **Collapsible Sidebar Sections**: Clean, accordion-style side panel sections (Video settings, Display settings, Operation mode, Tracking data, Shortcut keys) to optimize screen space.
+- **Dynamic ID Switcher & Creator**: 
+  - Click anywhere on the editing ID badge (color dot and text) to instantly open a dropdown list of currently existing IDs.
+  - Circular `+` button to automatically create and switch to the smallest available positive integer ID (`1`, `2`, ...).
+- **Multi-device Input Modes**: Choose between dedicated Mouse, Touch Panel, and Pen modes to unlock intuitive gestures (pinch-zoom, multi-finger pan) optimized for your device.
+- **Timeline Drawer Operations**: Real-time visualization of tracking status with professional tools to split, merge, rename, or delete tracking lines.
+- **Auto Seek after Click**: Speeds up annotation by automatically advancing the video after plotting a point.
+- **Load Media via Drag & Drop**: Load video files (`.mp4`, `.webm`, etc.) by dragging them directly onto the canvas.
+- **CSV Data Exchange**: Export annotations or import/restore previous tracking data easily.
+- **Undo System**: Supports undoing point additions, merges, splits, deletions, and renames (`Ctrl+Z`).
+- **Offline-capable**: A single-file HTML application requiring no installation or internet connection.
 
 ---
 
@@ -24,109 +29,109 @@ The tool runs entirely in the browser, requires no installation, and supports in
 
 ### 1. Open the Application
 
-* Use in online environment
-  * Open https://yabe-k.github.io/manutrace/dist/ManuTrace.html
-
-* Use in offline environment
-  * Download the HTML file `dist/ManuTrace.html` from this repository and open it in a modern web browser (Chrome, Firefox, or Edge recommended).
-No server or additional dependencies are required.
+* **Online**: Open https://yabe-k.github.io/manutrace/dist/ManuTrace.html in a web browser.
+* **Offline**: Download the `dist/ManuTrace.html` file and double-click to open it in any modern browser (Chrome, Firefox, or Edge recommended).
 
 ---
 
-### 2. Load a Video or Image
+### 2. Load a Video
 
-- Drag and drop a video (`.mp4`, `.webm`, etc.) or image file onto the application window  
+- Drag and drop your video file anywhere onto the application window  
   **or**
-- Use the file selection button in the toolbar
-
-Once loaded, the media will be displayed in the main canvas.
+- Click **"Select a file"** in the sidebar.
 
 ---
 
-### 3. Create Trajectories
+### 3. Choose your Operation Mode
 
-1. Select an object ID
-2. Click on the canvas to add a point at the current frame
-3. Advance frames and continue adding points
+Choose the mode in the **Operation mode** sidebar section according to your device:
 
-Trajectory data are stored automatically in memory while the page is open.
+#### 🖱️ Mouse Mode
+- **Left click**: Add a tracking point at the cursor position.
+- **Left click + drag**: Move an existing manually entered point.
+- **Right click + drag**: Pan the canvas.
+- **Right click (single click)**: Delete the manually entered point at the current frame.
+- **Mouse wheel**: Zoom in / out at the cursor position.
 
----
+#### 📱 Touch Panel Mode
+- **Tap**: Add a tracking point at the tapped position.
+- **2-finger pinch**: Zoom in / out.
+- **2-finger drag**: Pan the canvas.
 
-## Mouse Operations
-
-| Operation | Action |
-|----------|--------|
-| Left click | Add a trajectory point at the cursor position |
-| Left click + drag | Move an existing point |
-| Right click (or long press) | Delete a point |
-| Mouse wheel | Zoom in / out (if enabled) |
-| Drag canvas (background) | Pan the view (if enabled) |
+#### 🖊️ Pen Mode
+- **Pen tip tap**: Add a tracking point.
+- **Pen tip drag**: Move an existing manually entered point.
+- **1-finger drag**: Pan the canvas.
+- **2-finger pinch / drag**: Zoom & Pan.
+- **1-finger tap**: Play / pause video.
 
 ---
 
 ## Keyboard Shortcuts
 
-| Key | Function |
-|----|---------|
-| `Space` | Play / pause video |
-| `←` / `→` | Move one frame backward / forward |
-| `Shift + ←` / `Shift + →` | Move multiple frames |
-| `Ctrl + Z` | Undo last operation |
-| `Ctrl + Y` | Redo |
-| `Delete` / `Backspace` | Delete selected point |
-| `Number keys (1–9)` | Switch object ID |
-| `Home` | Jump to first frame |
+| Shortcut | Action |
+|:---|:---|
+| `Space` | Play / Pause video |
+| `←` / `→` | Jump backward / forward by default step (e.g. 0.2s, customizable) |
+| `Shift` + `←`/`→` | Jump by intermediate step (e.g. 1.0s, customizable) |
+| `Ctrl` + `←`/`→` | Jump by large step (e.g. 3.0s, customizable) |
+| `Ctrl` + `Shift` + `←`/`→` | Jump by extra large step (e.g. 10.0s, customizable) |
+| `Ctrl` + `Z` | Undo the last action (add, delete, split, merge, rename) |
+| `Ctrl` + `S` | Save CSV |
+| `Ctrl` + `Mouse Wheel` | Seek frame-by-frame |
+| `Shift` + `Mouse Wheel` | Increase / decrease playback speed |
+| `Backspace` / `Delete` | Delete the manually entered point at the current frame |
+| `Alphanumeric (0-9, a-z)` | Switch active editing ID |
 
-(Exact behavior may depend on browser and OS.)
+---
+
+## Timeline Operations
+
+Double-click the timeline bar or click the title to expand it. The drawer lets you visually audit your tracks:
+- **Scissors (Split)**: Split the selected track into two separate tracks at the current frame.
+- **Code Merge (Merge)**: Merge two tracks by entering their IDs. Points in overlap regions will be selectively kept.
+- **Pen (Rename)**: Rename the active ID to a new string.
+- **Trash (Delete)**: Permanently delete the selected track.
 
 ---
 
 ## CSV Format
 
-Trajectory data can be exported and imported as CSV files.
+Trajectory data are exported as standard CSV using the original video's absolute pixel coordinates.
 
 ### Columns
 
-Typical columns include:
-
-- `id`
-- `frame`
-- `time_sec`
-- `x`
-- `y`
-- `source`
+- `id`: Track/object identifier.
+- `frame`: 0-indexed frame number.
+- `time_sec`: Time in seconds.
+- `x`: X-coordinate, in absolute pixels of the original video.
+- `y`: Y-coordinate, in absolute pixels of the original video.
+- `source`: Tracking source (`manual` for manually plotted points, `interp` for spline-interpolated points).
 
 Example:
-
 ```csv
 id,frame,time_sec,x,y,source
-1,0,0,0.512,0.438,manual
-1,1,0.0333,0.519,0.442,interp
+1,0,0.000000,512.000,438.000,manual
+1,1,0.033333,519.000,442.000,interp
 ```
-Coordinates are stored in normalized image coordinates unless otherwise specified.
+
+---
 
 ## Data Safety
-* If trajectory data exist and you attempt to leave the page, a confirmation dialog will appear
-* Unsaved data will be lost if the page is closed without exporting
 
-## Intended Use Cases
-* Behavioral tracking of insects or other animals
-* Manual correction of automated tracking results
-* Educational demonstrations of movement analysis
-* Small-scale or exploratory trajectory annotation tasks
+- If unsaved tracking data exist, the browser will display a confirmation prompt if you attempt to reload or close the tab.
+- Always remember to export your work by clicking **Export CSV** (or `Ctrl + S`) before closing the application.
 
-## Limitations
-* Manual annotation is time-consuming for large datasets
-* Performance may degrade with very long videos or large numbers of objects
-* Not intended as a replacement for high-throughput automated tracking systems
+---
 
 ## Citation
 
 If you use this software in academic work, please cite the following paper:
 
-[To be filled]
+*[To be filled]*
 
-Citation is not legally required by the license, but is greatly appreciated
-and helps support further development.
+---
 
+## License
+
+This project is licensed under the MIT License.
