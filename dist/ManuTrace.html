@@ -394,7 +394,8 @@
     }
 
     .panel h3::after {
-      content: '\f078'; /* fa-chevron-down */
+      content: '\f078';
+      /* fa-chevron-down */
       font-family: 'Font Awesome 6 Free';
       font-weight: 900;
       font-size: 10px;
@@ -469,6 +470,12 @@
           <button class="op-mode-btn active" data-mode="mouse"><i class="fa-solid fa-arrow-pointer"></i> Mouse</button>
           <button class="op-mode-btn" data-mode="touch"><i class="fa-solid fa-hand-pointer"></i> Touch</button>
           <button class="op-mode-btn" data-mode="pen"><i class="fa-solid fa-pen"></i> Pen</button>
+        </div>
+        <div class="row" id="penTapPlayPauseRow" style="display: none; align-items:flex-start; margin-top: 4px;">
+          <label style="min-width:unset;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:8px">
+            <input id="penTapPlayPause" type="checkbox" checked />
+            Tap to play/pause (Touch)
+          </label>
         </div>
       </div>
 
@@ -1336,11 +1343,15 @@
     // =========================================================
     let currentOpMode = 'mouse'; // 'mouse', 'touch', 'pen'
     const opModeBtns = document.querySelectorAll('.op-mode-btn');
+    const penTapPlayPauseRow = document.getElementById('penTapPlayPauseRow');
     opModeBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         opModeBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentOpMode = btn.getAttribute('data-mode');
+        if (penTapPlayPauseRow) {
+          penTapPlayPauseRow.style.display = currentOpMode === 'pen' ? 'flex' : 'none';
+        }
       });
     });
 
@@ -1567,7 +1578,10 @@
           if (e.pointerType === 'pen') {
             handlePlot(e.clientX, e.clientY, e);
           } else if (e.pointerType === 'touch') {
-            togglePlayPause();
+            const penTapPlayPause = document.getElementById('penTapPlayPause');
+            if (penTapPlayPause && penTapPlayPause.checked) {
+              togglePlayPause();
+            }
           }
         }
       }
