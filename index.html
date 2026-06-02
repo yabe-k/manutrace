@@ -1,54 +1,71 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ManuTrace: browser-based tool for manual trajectory annotation in videos and images." />
+  <meta name="description"
+    content="ManuTrace: browser-based tool for manual trajectory annotation in videos and images." />
   <title>ManuTrace</title>
 
   <style>
-    :root{
+    :root {
       /* Tune these to match the app UI */
       --bg0: #0b0e14;
       --bg1: #0f1420;
-      --panel: rgba(255,255,255,0.06);
-      --panel2: rgba(255,255,255,0.09);
-      --text: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.68);
-      --muted2: rgba(255,255,255,0.54);
-      --border: rgba(255,255,255,0.12);
-      --accent: #7aa2ff; /* primary */
-      --accent2: #7dffcc; /* secondary (optional) */
-      --shadow: 0 18px 60px rgba(0,0,0,0.45);
+      --panel: rgba(255, 255, 255, 0.06);
+      --panel2: rgba(255, 255, 255, 0.09);
+      --text: rgba(255, 255, 255, 0.92);
+      --muted: rgba(255, 255, 255, 0.68);
+      --muted2: rgba(255, 255, 255, 0.54);
+      --border: rgba(255, 255, 255, 0.12);
+      --accent: #7aa2ff;
+      /* primary */
+      --accent2: #7dffcc;
+      /* secondary (optional) */
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
       --radius: 16px;
       --radius2: 22px;
       --maxw: 1040px;
     }
 
-    *{ box-sizing: border-box; }
-    html, body{ height: 100%; }
-    body{
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
       color: var(--text);
       background:
-        radial-gradient(1200px 500px at 20% 0%, rgba(122,162,255,0.18), transparent 60%),
-        radial-gradient(900px 500px at 90% 20%, rgba(125,255,204,0.10), transparent 55%),
+        radial-gradient(1200px 500px at 20% 0%, rgba(122, 162, 255, 0.18), transparent 60%),
+        radial-gradient(900px 500px at 90% 20%, rgba(125, 255, 204, 0.10), transparent 55%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
       line-height: 1.55;
     }
 
-    a{ color: inherit; text-decoration: none; }
-    a:hover{ text-decoration: underline; }
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
 
-    .wrap{
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .wrap {
       max-width: var(--maxw);
       margin: 0 auto;
       padding: 28px 20px 56px;
     }
 
     /* Header */
-    header{
+    header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -56,23 +73,23 @@
       padding: 10px 0 24px;
     }
 
-    .brand{
+    .brand {
       display: flex;
       align-items: center;
       gap: 12px;
       min-width: 0;
     }
 
-    .logo{
+    .logo {
       width: 36px;
       height: 36px;
       border-radius: 12px;
-      background: linear-gradient(135deg, rgba(122,162,255,1), rgba(125,255,204,0.85));
-      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      background: linear-gradient(135deg, rgba(122, 162, 255, 1), rgba(125, 255, 204, 0.85));
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
       flex: none;
     }
 
-    .brand h1{
+    .brand h1 {
       font-size: 16px;
       margin: 0;
       font-weight: 650;
@@ -82,7 +99,7 @@
       text-overflow: ellipsis;
     }
 
-    .brand .sub{
+    .brand .sub {
       display: block;
       font-size: 12px;
       color: var(--muted2);
@@ -90,7 +107,7 @@
       font-weight: 500;
     }
 
-    .nav{
+    .nav {
       display: flex;
       align-items: center;
       gap: 14px;
@@ -98,21 +115,22 @@
       justify-content: flex-end;
     }
 
-    .nav a{
+    .nav a {
       color: var(--muted);
       font-size: 13px;
       font-weight: 560;
       padding: 8px 10px;
       border-radius: 12px;
     }
-    .nav a:hover{
-      background: rgba(255,255,255,0.06);
+
+    .nav a:hover {
+      background: rgba(255, 255, 255, 0.06);
       text-decoration: none;
-      color: rgba(255,255,255,0.86);
+      color: rgba(255, 255, 255, 0.86);
     }
 
     /* Hero */
-    .hero{
+    .hero {
       display: block;
       grid-template-columns: 1.1fr 0.9fr;
       gap: 22px;
@@ -120,70 +138,74 @@
       margin-top: 10px;
     }
 
-    @media (max-width: 900px){
-      .hero{ grid-template-columns: 1fr; }
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
     }
 
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.05));
+    .card {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.05));
       border: 1px solid var(--border);
       border-radius: var(--radius2);
       box-shadow: var(--shadow);
     }
 
-    .heroText{
+    .heroText {
       padding: 26px 24px 22px;
     }
 
-    .kicker{
+    .kicker {
       display: inline-flex;
       align-items: center;
       gap: 10px;
       font-size: 12px;
       color: var(--muted);
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.10);
       padding: 7px 10px;
       border-radius: 999px;
       margin-bottom: 14px;
     }
 
-    .dot{
-      width: 8px; height: 8px; border-radius: 99px;
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
       background: var(--accent);
-      box-shadow: 0 0 0 4px rgba(122,162,255,0.18);
+      box-shadow: 0 0 0 4px rgba(122, 162, 255, 0.18);
       flex: none;
     }
 
-    .heroText h2{
+    .heroText h2 {
       font-size: 34px;
       margin: 10px 0 10px;
       letter-spacing: -0.4px;
       line-height: 1.15;
     }
 
-    .heroText p{
+    .heroText p {
       margin: 0 0 16px;
       color: var(--muted);
       font-size: 15px;
       max-width: 60ch;
     }
 
-    .ctaRow{
+    .ctaRow {
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
       margin-top: 14px;
     }
 
-    .btn{
+    .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
       padding: 11px 14px;
       border-radius: 14px;
-      border: 1px solid rgba(255,255,255,0.10);
+      border: 1px solid rgba(255, 255, 255, 0.10);
       font-weight: 650;
       font-size: 14px;
       cursor: pointer;
@@ -191,83 +213,91 @@
       text-decoration: none !important;
     }
 
-    .btnPrimary{
-      background: linear-gradient(135deg, rgba(122,162,255,1), rgba(122,162,255,0.82));
+    .btnPrimary {
+      background: linear-gradient(135deg, rgba(122, 162, 255, 1), rgba(122, 162, 255, 0.82));
       color: #071023;
-      border-color: rgba(122,162,255,0.0);
-      box-shadow: 0 14px 40px rgba(122,162,255,0.18);
+      border-color: rgba(122, 162, 255, 0.0);
+      box-shadow: 0 14px 40px rgba(122, 162, 255, 0.18);
     }
-    .btnPrimary:hover{ filter: brightness(1.03); }
 
-    .btnGhost{
-      background: rgba(255,255,255,0.06);
-      color: rgba(255,255,255,0.9);
+    .btnPrimary:hover {
+      filter: brightness(1.03);
     }
-    .btnGhost:hover{ background: rgba(255,255,255,0.08); }
 
-    .note{
+    .btnGhost {
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .btnGhost:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .note {
       margin-top: 12px;
       font-size: 12px;
       color: var(--muted2);
     }
 
     /* Screenshot */
-    .shot{
+    .shot {
       padding: 14px;
     }
 
-    .shot .frame{
+    .shot .frame {
       border-radius: var(--radius);
       overflow: hidden;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: rgba(255, 255, 255, 0.05);
     }
 
-    .shot img{
+    .shot img {
       display: block;
       width: 100%;
       height: auto;
     }
 
-    .shot .caption{
+    .shot .caption {
       font-size: 12px;
       color: var(--muted2);
       padding: 10px 6px 2px;
     }
 
     /* Sections */
-    .grid{
+    .grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 14px;
       margin-top: 18px;
     }
 
-    @media (max-width: 900px){
-      .grid{ grid-template-columns: 1fr; }
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
     }
 
-    .mini{
+    .mini {
       padding: 16px 16px 14px;
     }
 
-    .mini h3{
+    .mini h3 {
       margin: 0 0 6px;
       font-size: 14px;
       letter-spacing: 0.1px;
     }
 
-    .mini p{
+    .mini p {
       margin: 0;
       font-size: 13px;
       color: var(--muted);
     }
 
     /* Footer */
-    footer{
+    footer {
       margin-top: 28px;
       padding-top: 18px;
-      border-top: 1px solid rgba(255,255,255,0.10);
+      border-top: 1px solid rgba(255, 255, 255, 0.10);
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -277,24 +307,24 @@
       font-size: 12px;
     }
 
-    .pill{
+    .pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 7px 10px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .kbd{
+    .kbd {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       font-size: 11px;
       padding: 3px 6px;
       border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(0,0,0,0.25);
-      color: rgba(255,255,255,0.85);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(0, 0, 0, 0.25);
+      color: rgba(255, 255, 255, 0.85);
     }
   </style>
 </head>
@@ -310,8 +340,10 @@
 
       <nav class="nav">
         <!-- Replace URLs as needed -->
-        <a href="https://github.com/yabe-k/manutrace/blob/main/README.md" title="See README in the repository">Documentation</a>
-        <a href="https://raw.githubusercontent.com/yabe-k/manutrace/main/dist/ManuTrace.html" download>Download ManuTrace.html</a>
+        <a href="https://github.com/yabe-k/manutrace/blob/main/README.md"
+          title="See README in the repository">Documentation</a>
+        <a href="https://raw.githubusercontent.com/yabe-k/manutrace/main/dist/ManuTrace.html" download>Download
+          ManuTrace.html</a>
       </nav>
     </header>
 
@@ -326,11 +358,11 @@
         <div class="ctaRow">
           <!-- Link to the actual app HTML -->
           <a class="btn btnPrimary" href="./dist/ManuTrace.html">Get Started</a>
-          <a class="btn btnGhost" href="https://raw.githubusercontent.com/yabe-k/manutrace/main/dist/ManuTrace.html" download>Download (Single HTML file)</a>
+          <a class="btn btnGhost" href="./dist/ManuTrace.html" download="ManuTrace.html">Download (Single HTML file)</a>
         </div>
 
         <div class="note">
-            No installation required. Just open in a modern web browser (e.g., Chrome, Firefox, Edge, Safari).
+          No installation required. Just open in a modern web browser (e.g., Chrome, Firefox, Edge, Safari).
         </div>
       </div>
 
@@ -340,7 +372,7 @@
           <img src="./assets/screenshot.png" alt="Screenshot of the ManuTrace UI" />
         </div>
         <div class="caption">
-            Screenshot of the ManuTrace user interface.
+          Screenshot of the ManuTrace user interface.
         </div>
       </div>
     </section>
@@ -356,4 +388,5 @@
     document.getElementById("y").textContent = String(new Date().getFullYear());
   </script>
 </body>
+
 </html>
