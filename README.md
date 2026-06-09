@@ -128,7 +128,7 @@ id,frame,time_sec,x,y,source
 
 If you use this software in academic work, please cite the following paper:
 
-*[To be filled]*
+Yabe, K., Y. Tosaka, and K. Matsuura. 2026. “ManuTrace: An HTML-Based Interface for Manually Extracting Movement Trajectory Data From a Video.” Ecology and Evolution16, no. 6: e73804. https://doi.org/10.1002/ece3.73804.
 
 ---
 
