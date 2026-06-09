@@ -138,22 +138,82 @@
     }
 
     .now-id {
+      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 4px 8px;
+      padding: 4px 12px;
       border: 1px solid #2a2a2a;
       border-radius: 999px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      cursor: pointer;
+    }
+
+    .now-id:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 6px rgba(74, 163, 255, 0.2);
     }
 
     .dot {
       width: 20px;
       height: 20px;
-      border-radius: 50%
+      border-radius: 50%;
+      flex-shrink: 0;
     }
 
     #nowIdText {
       font-size: 18px;
+      font-weight: 600;
+      color: var(--fg);
+      user-select: none;
+      padding-right: 4px;
+    }
+
+    #nowIdSelect {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    #nowIdSelect option {
+      background: #181818;
+      color: var(--fg);
+      font-size: 14px;
+    }
+
+    /* ==== Add ID Button ==== */
+    .add-id-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid #2a2a2a;
+      background: #222;
+      color: var(--fg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 11px;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .add-id-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 8px rgba(74, 163, 255, 0.4);
+      transform: scale(1.05);
+    }
+
+    .add-id-btn:active {
+      transform: scale(0.95);
     }
 
     .hint {
@@ -277,6 +337,88 @@
       box-shadow: 0 0 0 3px rgba(74, 163, 255, .6);
       transition: box-shadow .12s ease-out
     }
+
+    /* ==== Operation Mode Toggle ==== */
+    .op-mode-group {
+      display: flex;
+      background: #181818;
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .op-mode-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 6px 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .op-mode-btn:hover {
+      color: var(--fg);
+      background: #252525;
+    }
+
+    .op-mode-btn.active {
+      background: #2d5bff;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(45, 91, 255, 0.4);
+    }
+
+    /* ==== Collapsible Panel Sections ==== */
+    .panel h3 {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+      padding: 6px 8px;
+      margin: 16px -8px 8px;
+      border-radius: 6px;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .panel h3:hover {
+      background-color: #222;
+      color: var(--accent);
+    }
+
+    .panel h3::after {
+      content: '\f078';
+      /* fa-chevron-down */
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      font-size: 10px;
+      color: var(--muted);
+      transition: transform 0.25s ease, color 0.15s ease;
+    }
+
+    .panel h3:hover::after {
+      color: var(--accent);
+    }
+
+    .panel h3.collapsed::after {
+      transform: rotate(-90deg);
+    }
+
+    .collapsible-content {
+      display: block;
+      transition: opacity 0.2s ease;
+    }
+
+    .collapsible-content.collapsed {
+      display: none;
+    }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
 </head>
@@ -295,105 +437,139 @@
 
       <div class="sep"></div>
       <h3>Video settings</h3>
-      <div class="row">
-        <label>FPS (Estimated/manually entered)</label>
-        <input id="fpsInput" type="number" min="1" value="30" />
+      <div class="collapsible-content">
+        <div class="row">
+          <label>FPS (Estimated/manually entered)</label>
+          <input id="fpsInput" type="number" min="1" value="30" />
+        </div>
+        <div class="row">
+          <label>Play speed</label>
+          <input id="rateInput" type="number" min="0.1" step="0.1" value="1" />
+        </div>
       </div>
-      <div class="row">
-        <label>Play speed</label>
-        <input id="rateInput" type="number" min="0.1" step="0.1" value="1" />
-      </div>
+
       <h3>Display settings</h3>
-      <div class="row">
-        <label>Frame number to show tracks: n</label>
-        <input id="trailN" type="number" min="0" value="30" />
+      <div class="collapsible-content">
+        <div class="row">
+          <label>Frame number to show tracks: n</label>
+          <input id="trailN" type="number" min="0" value="30" />
+        </div>
+        <div class="row">
+          <label>Timeline height (px)</label>
+          <input id="timelineH" type="number" min="60" max="600" step="10" value="180" />
+        </div>
+        <div class="row">
+          <button id="resetView" class="btn"><i class="fa-solid fa-magnifying-glass"></i>Reset zoom/pan</button>
+        </div>
       </div>
-      <div class="row">
-        <label>Timeline height (px)</label>
-        <input id="timelineH" type="number" min="60" max="600" step="10" value="180" />
-      </div>
-      <div class="row">
-        <button id="resetView" class="btn"><i class="fa-solid fa-magnifying-glass"></i>Reset zoom/pan</button>
+
+      <div class="sep"></div>
+      <h3>Operation mode</h3>
+      <div class="collapsible-content">
+        <div class="op-mode-group" id="opModeGroup">
+          <button class="op-mode-btn active" data-mode="mouse"><i class="fa-solid fa-arrow-pointer"></i> Mouse</button>
+          <button class="op-mode-btn" data-mode="touch"><i class="fa-solid fa-hand-pointer"></i> Touch</button>
+          <button class="op-mode-btn" data-mode="pen"><i class="fa-solid fa-pen"></i> Pen</button>
+        </div>
+        <div class="row" id="penTapPlayPauseRow" style="display: none; align-items:flex-start; margin-top: 4px;">
+          <label style="min-width:unset;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:8px">
+            <input id="penTapPlayPause" type="checkbox" checked />
+            Tap to play/pause (Touch)
+          </label>
+        </div>
       </div>
 
       <div class="sep"></div>
       <h3>Tracking data</h3>
-      <div class="row">
-        <label>Now editing: </label>
-        <span id="nowId" class="now-id"><span class="dot" id="nowDot"></span><span id="nowIdText">—</span></span>
-      </div>
-      <div class="hint">Press numeric/alphabet keys to switch object ID to edit</div>
-      <div class="hint">Click on video to set position of the object</div>
+      <div class="collapsible-content">
+        <div class="row" style="align-items: center;">
+          <label>Now editing: </label>
+          <div style="display: inline-flex; align-items: center; gap: 8px;">
+            <div id="nowId" class="now-id">
+              <span class="dot" id="nowDot"></span>
+              <span id="nowIdText">—</span>
+              <select id="nowIdSelect">
+                <!-- populated dynamically -->
+              </select>
+            </div>
+            <button id="addIdBtn" class="add-id-btn" title="Create new ID"><i class="fa-solid fa-plus"></i></button>
+          </div>
+        </div>
+        <div class="hint">Press numeric/alphabet keys to switch object ID to edit</div>
+        <div class="hint">Click on video to set position of the object</div>
 
-      <div class="sep"></div>
+        <div class="sep"></div>
 
-      <div class="row" style="align-items:flex-start">
-        <label style="min-width:unset;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:8px">
-          <input id="autoSeekAfterClick" type="checkbox" />
-          Auto seek after click
-        </label>
-      </div>
-      <div class="hint">When enabled, the video seeks forward by the same amount as an arrow key press after each
-        recorded point.</div>
-
-      <div class="sep"></div>
-
-      <div class="row">
-        <button id="exportCsv" class="btn"><i class="fa-solid fa-file-arrow-down"></i>
-          <div>Export CSV</div>
-        </button>
-        <button id="importCsvBtn" class="btn"><i class="fa-solid fa-file-import"></i>
-          <div>Import CSV</div>
-        </button>
-        <input id="importCsvInput" class="file-input" type="file" accept=".csv,text/csv" />
-        <button id="clearAll" class="btn danger"><i class="fa-solid fa-trash"></i>
-          <div>Trash all tracks</div>
-        </button>
-      </div>
-      <div class="row" style="align-items:flex-start">
-        <label>Save name</label>
-        <div style="display:flex;flex-direction:column;gap:6px;flex:1">
-          <input id="saveName" type="text" placeholder="tracks" />
-          <label style="min-width:unset;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
-            <input id="addSourceFileName" type="checkbox" checked />Add source file name
-          </label>
-          <label style="min-width:unset;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
-            <input id="addTimestamp" type="checkbox" checked />Add timestamp
+        <div class="row" style="align-items:flex-start">
+          <label style="min-width:unset;color:var(--muted);font-size:14px;display:flex;align-items:center;gap:8px">
+            <input id="autoSeekAfterClick" type="checkbox" />
+            Auto seek after click
           </label>
         </div>
+        <div class="hint">When enabled, the video seeks forward by the same amount as an arrow key press after each
+          recorded point.</div>
+
+        <div class="sep"></div>
+
+        <div class="row">
+          <button id="exportCsv" class="btn"><i class="fa-solid fa-file-arrow-down"></i>
+            <div>Export CSV</div>
+          </button>
+          <button id="importCsvBtn" class="btn"><i class="fa-solid fa-file-import"></i>
+            <div>Import CSV</div>
+          </button>
+          <input id="importCsvInput" class="file-input" type="file" accept=".csv,text/csv" />
+          <button id="clearAll" class="btn danger"><i class="fa-solid fa-trash"></i>
+            <div>Trash all tracks</div>
+          </button>
+        </div>
+        <div class="row" style="align-items:flex-start">
+          <label>Save name</label>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <input id="saveName" type="text" placeholder="tracks" />
+            <label style="min-width:unset;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
+              <input id="addSourceFileName" type="checkbox" checked />Add source file name
+            </label>
+            <label style="min-width:unset;color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px">
+              <input id="addTimestamp" type="checkbox" checked />Add timestamp
+            </label>
+          </div>
+        </div>
+        <div class="small">CSV columns: id,frame,time_sec,x,y,source(manual|interp)</div>
       </div>
-      <div class="small">CSV columns: id,frame,time_sec,x,y,source(manual|interp)</div>
 
       <div class="sep"></div>
 
       <h3>Shortcut keys</h3>
-      <div class="row">
-        ●<span class="kbd">Space</span>: Play/Pause
-      </div>
-      <div class="row">
-        ●<span class="kbd">←</span>/<span class="kbd">→</span>: Jump <input id="k0" type="number" min="0" step="0.1"
-          value="0.2" /> sec.
-      </div>
-      <div class="row">
-        ●<span class="kbd">Shift</span> + <span class="kbd">←</span><span class="kbd">→</span>: <input id="k1"
-          type="number" min="0" step="0.1" value="1.0" /> sec.
-      </div>
-      <div class="row">
-        ●<span class="kbd">Ctrl</span> + <span class="kbd">←</span><span class="kbd">→</span>: <input id="k2"
-          type="number" min="0" step="0.1" value="3.0" /> sec.
-      </div>
-      <div class="row">
-        ●<span class="kbd">Ctrl</span>+<span class="kbd">Shift</span> + <span class="kbd">←</span><span
-          class="kbd">→</span>: <input id="k3" type="number" min="0" step="0.1" value="10.0" /> sec.
-      </div>
-      <div class="row">
-        ●<span class="kbd">Ctrl</span>+<span class="kbd">S</span>: Save CSV
-      </div>
-      <div class="row">
-        ●<span class="kbd">Ctrl</span>+ wheel: seek
-      </div>
-      <div class="row">
-        ●<span class="kbd">Shift</span>+ wheel: Change play speed
+      <div class="collapsible-content">
+        <div class="row">
+          ●<span class="kbd">Space</span>: Play/Pause
+        </div>
+        <div class="row">
+          ●<span class="kbd">←</span>/<span class="kbd">→</span>: Jump <input id="k0" type="number" min="0" step="0.1"
+            value="0.2" /> sec.
+        </div>
+        <div class="row">
+          ●<span class="kbd">Shift</span> + <span class="kbd">←</span><span class="kbd">→</span>: <input id="k1"
+            type="number" min="0" step="0.1" value="1.0" /> sec.
+        </div>
+        <div class="row">
+          ●<span class="kbd">Ctrl</span> + <span class="kbd">←</span><span class="kbd">→</span>: <input id="k2"
+            type="number" min="0" step="0.1" value="3.0" /> sec.
+        </div>
+        <div class="row">
+          ●<span class="kbd">Ctrl</span>+<span class="kbd">Shift</span> + <span class="kbd">←</span><span
+            class="kbd">→</span>: <input id="k3" type="number" min="0" step="0.1" value="10.0" /> sec.
+        </div>
+        <div class="row">
+          ●<span class="kbd">Ctrl</span>+<span class="kbd">S</span>: Save CSV
+        </div>
+        <div class="row">
+          ●<span class="kbd">Ctrl</span>+ wheel: seek
+        </div>
+        <div class="row">
+          ●<span class="kbd">Shift</span>+ wheel: Change play speed
+        </div>
       </div>
 
     </aside>
@@ -402,9 +578,11 @@
       <div class="toolbar" style="position: relative;">
         <div class="small" id="status" style="position: absolute; left: 12px; top: 2px;">Video not loaded</div>
         <button id="playPause" class="btn" style="width: 80px;">▶ Play</button>
-        <div style="flex:1; text-align:center;">
+        <div style="flex:1; text-align:center; display:flex; align-items:center; justify-content:center; gap:4px;">
+          <button id="goToPrevTime" class="btn" title="Jump backward (0.2s)">&nbsp;&lt;&lt;&nbsp;</button>
           <button id="goToPrevFrame" class="btn" title="previous frame">&nbsp;&lt;&nbsp;</button>
           <button id="goToNextFrame" class="btn" title="next frame">&nbsp;&gt;&nbsp;</button>
+          <button id="goToNextTime" class="btn" title="Jump forward (0.2s)">&nbsp;&gt;&gt;&nbsp;</button>
         </div>
         <button id="goStart" class="btn" title="Go to start">⏮ Start</button>
       </div>
@@ -459,7 +637,8 @@
     const prevFrame = document.getElementById('prevFrame');
     const nextFrame = document.getElementById('nextFrame');
     const statusEl = document.getElementById('status');
-    const nowIdEl = document.getElementById('nowIdText');
+    const nowIdSelect = document.getElementById('nowIdSelect');
+    const nowIdText = document.getElementById('nowIdText');
     const nowDotEl = document.getElementById('nowDot');
     const timelineEl = document.getElementById('timeline');
     const timelineHandle = document.getElementById('timelineHandle');
@@ -709,13 +888,86 @@
       return colorPool[colorIndexById.get(id)];
     }
 
+    // =========================================================
+    // ID Dropdown & Generation Functions
+    // =========================================================
+    function updateIdDropdown() {
+      const select = document.getElementById('nowIdSelect');
+      if (!select) return;
+
+      // Clear existing options
+      select.innerHTML = '';
+
+      // Get all existing IDs and sort them numerically/alphabetically
+      const ids = Object.keys(tracks).sort((a, b) => {
+        const numA = parseFloat(a);
+        const numB = parseFloat(b);
+        const isNumA = !isNaN(numA) && isFinite(a);
+        const isNumB = !isNaN(numB) && isFinite(b);
+        if (isNumA && isNumB) {
+          return numA - numB;
+        }
+        if (isNumA) return -1;
+        if (isNumB) return 1;
+        return a.localeCompare(b);
+      });
+
+      // Add options to select
+      ids.forEach(id => {
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = id;
+        select.appendChild(opt);
+      });
+
+      // Restore selection
+      if (ids.includes(currentId)) {
+        select.value = currentId;
+      } else if (ids.length > 0) {
+        select.value = ids[0];
+      }
+
+      if (nowIdText) {
+        nowIdText.textContent = select.value || '—';
+      }
+    }
+
+    function getSmallestAvailableId() {
+      let id = 1;
+      while (tracks[String(id)]) {
+        id++;
+      }
+      return String(id);
+    }
+
+    // Dropdown change and add ID button listeners
+    const selectEl = document.getElementById('nowIdSelect');
+    if (selectEl) {
+      selectEl.addEventListener('change', () => {
+        setCurrentId(selectEl.value);
+      });
+    }
+
+    const addIdBtn = document.getElementById('addIdBtn');
+    if (addIdBtn) {
+      addIdBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const newId = getSmallestAvailableId();
+        setCurrentId(newId);
+      });
+    }
+
     let currentId = null;
     function setCurrentId(id) {
       if (!tracks[id]) {
         tracks[id] = { color: colorForId(id), manual: new Map(), interp: new Map() };
       }
       currentId = id;
-      nowIdEl.textContent = id;
+      updateIdDropdown();
+      if (nowIdText) {
+        nowIdText.textContent = id;
+      }
       nowDotEl.style.background = tracks[id].color;
       ensureBlinkTimer();
       ensureBlinkTimer();
@@ -880,6 +1132,8 @@
       recomputeInterpolationForId(currentId);
       recomputeInterpolationForId(newId);
 
+      updateIdDropdown();
+
       drawOverlay();
       drawTimeline();
     });
@@ -976,6 +1230,8 @@
       // もし削除したIDが現在のIDだった場合、残した方に切り替える
       if (currentId === backId) {
         setCurrentId(frontId);
+      } else {
+        updateIdDropdown();
       }
 
       // 入力欄をクリア
@@ -1082,44 +1338,80 @@
       drawOverlay();
     }, { passive: false });
 
-    dropzone.addEventListener('contextmenu', (e) => { e.preventDefault(); });
-    overlay.addEventListener('contextmenu', (e) => { e.preventDefault(); });
-    let isRightPanning = false; let panLastX = 0; let panLastY = 0;
-    overlay.addEventListener('mousedown', (e) => {
-      if (e.button !== 2) return;
-      e.preventDefault();
-      isRightPanning = true;
-      panLastX = e.clientX; panLastY = e.clientY;
-      dropzone.style.cursor = 'grabbing';
-    });
-    window.addEventListener('mousemove', (e) => {
-      if (!isRightPanning) return;
-      const dx = e.clientX - panLastX;
-      const dy = e.clientY - panLastY;
-      panLastX = e.clientX; panLastY = e.clientY;
-      panX += dx; panY += dy;
-      applyStageTransform();
-      drawOverlay();
-    });
-    window.addEventListener('mouseup', (e) => {
-      if (!isRightPanning) return;
-      if (e.button === 2) {
-        isRightPanning = false;
-        dropzone.style.cursor = '';
-      }
+    // =========================================================
+    // Operation Mode & Input Handling
+    // =========================================================
+    let currentOpMode = 'mouse'; // 'mouse', 'touch', 'pen'
+    const opModeBtns = document.querySelectorAll('.op-mode-btn');
+    const penTapPlayPauseRow = document.getElementById('penTapPlayPauseRow');
+    opModeBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        opModeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentOpMode = btn.getAttribute('data-mode');
+        if (penTapPlayPauseRow) {
+          penTapPlayPauseRow.style.display = currentOpMode === 'pen' ? 'flex' : 'none';
+        }
+      });
     });
 
-    // =========================================================
-    // クリックで手動点追加（動画は一時停止中に）
-    // =========================================================
-    overlay.addEventListener('click', (e) => {
+    // Time Jump Buttons
+    const goToPrevTime = document.getElementById('goToPrevTime');
+    const goToNextTime = document.getElementById('goToNextTime');
+    function updateTimeJumpTooltips() {
+      const k0 = +k0Input.value || 0.2;
+      goToPrevTime.title = `Jump backward (${k0}s)`;
+      goToNextTime.title = `Jump forward (${k0}s)`;
+    }
+    if (k0Input) k0Input.addEventListener('change', updateTimeJumpTooltips);
+    updateTimeJumpTooltips();
+
+    goToPrevTime.addEventListener('click', () => {
       if (!video.src) return;
-      if (!video.paused) {
-        return; // 再生中は記録しない
-      }
+      const k0 = +k0Input.value || 0.2;
+      video.currentTime = Math.max(0, video.currentTime - k0);
+    });
+    goToNextTime.addEventListener('click', () => {
+      if (!video.src) return;
+      const k0 = +k0Input.value || 0.2;
+      video.currentTime = Math.min(video.duration || Infinity, video.currentTime + k0);
+    });
+
+    dropzone.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+    overlay.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+    overlay.style.touchAction = 'none'; // Prevent default browser touch actions (scroll, zoom)
+
+    let activePointers = new Map();
+    let isPanning = false;
+    let panLastX = 0, panLastY = 0;
+
+    // Zoom state
+    let initialPinchDistance = 0;
+    let initialPinchScale = 1;
+    let initialPinchCenter = { x: 0, y: 0 };
+    let initialPanX = 0, initialPanY = 0;
+
+    // Tap detection state
+    let pointerDownTime = 0;
+    let pointerDownStartPos = { x: 0, y: 0 };
+
+    function calcDistance(p1, p2) {
+      const dx = p2.clientX - p1.clientX;
+      const dy = p2.clientY - p1.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    function calcCenter(p1, p2) {
+      return { x: (p1.clientX + p2.clientX) / 2, y: (p1.clientY + p2.clientY) / 2 };
+    }
+
+    // =========================================================
+    // 手動点追加 (Plot)
+    // =========================================================
+    function handlePlot(clientX, clientY, e) {
+      if (!video.src || !video.paused) return;
       const fps = Math.max(1, +fpsInput.value || 30);
       const frame = Math.round(video.currentTime * fps);
-      const p = screenToVideoCoord(e.clientX, e.clientY);
+      const p = screenToVideoCoord(clientX, clientY);
 
       if (!currentId) setCurrentId('1');
       const t = tracks[currentId];
@@ -1131,25 +1423,169 @@
 
       statusEl.textContent = `ID ${currentId}: Added a point at frame ${frame} (x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)})`;
 
-      // 自動シークが有効なら進める
       if (autoSeekAfterClickChk && autoSeekAfterClickChk.checked) {
         const k0 = Math.max(0, +k0Input.value || 0);
         const k1 = Math.max(0, +k1Input.value || 0);
         const k2 = Math.max(0, +k2Input.value || 0);
         const k3 = Math.max(0, +k3Input.value || 0);
 
-        const dt = (e.ctrlKey && e.shiftKey) ? k3
-          : e.ctrlKey ? k2
-            : e.shiftKey ? k1
+        const dt = (e && e.ctrlKey && e.shiftKey) ? k3
+          : (e && e.ctrlKey) ? k2
+            : (e && e.shiftKey) ? k1
               : k0;
-
         video.currentTime = Math.max(0, Math.min(video.duration || Infinity, video.currentTime + dt));
       }
 
       drawOverlay();
       drawTimeline();
       updateToolbarTime();
+    }
+
+    // =========================================================
+    // Pointer Events
+    // =========================================================
+    overlay.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      overlay.setPointerCapture(e.pointerId);
+      activePointers.set(e.pointerId, e);
+
+      if (activePointers.size === 1) {
+        pointerDownTime = Date.now();
+        pointerDownStartPos = { x: e.clientX, y: e.clientY };
+      }
+
+      // 1) Mouse mode (or default fallback for mouse)
+      if (currentOpMode === 'mouse' || e.pointerType === 'mouse') {
+        if (e.button === 2) { // Right click -> Pan
+          isPanning = true;
+          panLastX = e.clientX; panLastY = e.clientY;
+          dropzone.style.cursor = 'grabbing';
+        }
+      }
+      // 2) Touch mode
+      else if (currentOpMode === 'touch') {
+        if (activePointers.size === 2) {
+          const pts = Array.from(activePointers.values());
+          initialPinchDistance = calcDistance(pts[0], pts[1]);
+          initialPinchScale = scale;
+          initialPinchCenter = calcCenter(pts[0], pts[1]);
+          initialPanX = panX;
+          initialPanY = panY;
+          isPanning = true;
+        }
+      }
+      // 3) Pen mode
+      else if (currentOpMode === 'pen') {
+        if (e.pointerType === 'touch') {
+          if (activePointers.size === 1) {
+            isPanning = true; // 1-finger pan
+            panLastX = e.clientX; panLastY = e.clientY;
+          } else if (activePointers.size === 2) {
+            const pts = Array.from(activePointers.values());
+            initialPinchDistance = calcDistance(pts[0], pts[1]);
+            initialPinchScale = scale;
+            initialPinchCenter = calcCenter(pts[0], pts[1]);
+            initialPanX = panX;
+            initialPanY = panY;
+            isPanning = true;
+          }
+        }
+      }
     });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, e);
+
+      // Handle preview coordinates
+      if (video.src) {
+        const fps = Math.max(1, +fpsInput.value || 30);
+        const frame = Math.round(video.currentTime * fps);
+        const p = screenToVideoCoord(e.clientX, e.clientY);
+        statusEl.textContent = `t=${(video.currentTime || 0).toFixed(3)}s (frame ${frame}) | x=${p.x.toFixed(1)}, y=${p.y.toFixed(1)}`;
+      }
+
+      if (isPanning) {
+        // Handle Mouse pan
+        if ((currentOpMode === 'mouse' || e.pointerType === 'mouse') && activePointers.size === 1) {
+          const dx = e.clientX - panLastX; const dy = e.clientY - panLastY;
+          panX += dx; panY += dy;
+          panLastX = e.clientX; panLastY = e.clientY;
+          applyStageTransform(); drawOverlay();
+        }
+        // Handle Touch / Pen 2-finger zoom+pan
+        else if ((currentOpMode === 'touch' || (currentOpMode === 'pen' && e.pointerType === 'touch')) && activePointers.size === 2) {
+          const pts = Array.from(activePointers.values());
+          const currentDist = calcDistance(pts[0], pts[1]);
+          const currentCenter = calcCenter(pts[0], pts[1]);
+
+          if (initialPinchDistance > 0) {
+            const factor = currentDist / initialPinchDistance;
+            scale = initialPinchScale * factor;
+
+            const crect = dropzone.getBoundingClientRect();
+            const centerWorldX = (initialPinchCenter.x - crect.left - initialPanX) / initialPinchScale;
+            const centerWorldY = (initialPinchCenter.y - crect.top - initialPanY) / initialPinchScale;
+
+            panX = (currentCenter.x - crect.left) - centerWorldX * scale;
+            panY = (currentCenter.y - crect.top) - centerWorldY * scale;
+
+            applyStageTransform(); drawOverlay();
+          }
+        }
+        // Handle Pen mode 1-finger touch pan
+        else if (currentOpMode === 'pen' && e.pointerType === 'touch' && activePointers.size === 1) {
+          const dx = e.clientX - panLastX; const dy = e.clientY - panLastY;
+          panX += dx; panY += dy;
+          panLastX = e.clientX; panLastY = e.clientY;
+          applyStageTransform(); drawOverlay();
+        }
+      }
+    });
+
+    window.addEventListener('pointerup', handlePointerEnd);
+    window.addEventListener('pointercancel', handlePointerEnd);
+
+    function handlePointerEnd(e) {
+      if (!activePointers.has(e.pointerId)) return;
+
+      const pointersCount = activePointers.size;
+      activePointers.delete(e.pointerId);
+
+      if (activePointers.size === 0) {
+        isPanning = false;
+        dropzone.style.cursor = '';
+      } else if (activePointers.size === 1) {
+        const remaining = Array.from(activePointers.values())[0];
+        panLastX = remaining.clientX;
+        panLastY = remaining.clientY;
+      }
+
+      // Check for tap
+      const dt = Date.now() - pointerDownTime;
+      const dx = e.clientX - pointerDownStartPos.x;
+      const dy = e.clientY - pointerDownStartPos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      const isTap = (pointersCount === 1) && (dt < 300) && (dist < 5);
+
+      if (isTap) {
+        if (e.pointerType === 'mouse' && e.button === 0) {
+          handlePlot(e.clientX, e.clientY, e);
+        } else if (currentOpMode === 'touch' && e.pointerType === 'touch') {
+          handlePlot(e.clientX, e.clientY, e);
+        } else if (currentOpMode === 'pen') {
+          if (e.pointerType === 'pen') {
+            handlePlot(e.clientX, e.clientY, e);
+          } else if (e.pointerType === 'touch') {
+            const penTapPlayPause = document.getElementById('penTapPlayPause');
+            if (penTapPlayPause && penTapPlayPause.checked) {
+              togglePlayPause();
+            }
+          }
+        }
+      }
+    }
 
     // =========================================================
     // 再生ループ＆描画
@@ -1571,6 +2007,8 @@
       if (!currentId) {
         const firstId = ids.values().next().value || '1';
         setCurrentId(String(firstId));
+      } else {
+        updateIdDropdown();
       }
 
       return { added, skipped, ids, fpsEstimate };
@@ -1876,6 +2314,19 @@
       ctx.beginPath(); ctx.moveTo(xNow, padT); ctx.lineTo(xNow, padT + innerH); ctx.stroke();
     }
     //ここまで＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+    // =========================================================
+    // Collapsible Panel Sections
+    // =========================================================
+    document.querySelectorAll('.panel h3').forEach(header => {
+      header.addEventListener('click', () => {
+        header.classList.toggle('collapsed');
+        const content = header.nextElementSibling;
+        if (content && content.classList.contains('collapsible-content')) {
+          content.classList.toggle('collapsed');
+        }
+      });
+    });
   </script>
 </body>
 
